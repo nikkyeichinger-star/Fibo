@@ -1,0 +1,334 @@
+/* Design tokens: the "Calm & Focus" palette — muted teal with a speck of soft coral. */
+:root {
+    /* === Brand palette — the 5 literal colors from the brand guide === */
+    --teal-50: #FAF8F5;  /* background */
+    --teal-500: #528981; /* primary accent */
+    --teal-300: #528981; /* primary accent, alias — used where the accent needs to read as a border/ring */
+    --teal-700: #2A524E; /* buttons / headers */
+    --teal-600: #2A524E; /* buttons / headers, alias — reserved for header-specific uses */
+    --coral-200: #D4A373; /* warm accent — rewards */
+    --coral-300: #D4A373; /* warm accent — rewards */
+    --coral-400: #D4A373; /* warm accent — rewards */
+    --ink-900: #1A2E2C;   /* text */
+
+    /* === Derived utility tints — computed from the brand colors above, not new literals ===
+       The brand guide only gives one light neutral (the background) and one accent, so the
+       light "wash" shades (borders, unvisited dots, hover states) are mixed from those two —
+       kept subtle on purpose, per the guide's calm/rustig direction. Same idea for the two
+       lighter text steps: tonal mixes of the one brand text color, not a different hue. */
+    --teal-100: color-mix(in srgb, var(--teal-500) 14%, var(--teal-50));
+    --teal-200: color-mix(in srgb, var(--teal-500) 28%, var(--teal-50));
+    --ink-600: color-mix(in srgb, var(--ink-900) 62%, white);
+    --ink-400: color-mix(in srgb, var(--ink-900) 38%, white);
+
+    /* Corner radii: nothing sharp anywhere in the app */
+    --radius-lg: 28px;   /* cards */
+    --radius-md: 18px;   /* textarea */
+    --radius-full: 999px; /* pill buttons, dots */
+
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink-900);
+    /* Flat brand background — the guide wants this calm, not a gradient */
+    background: var(--teal-50);
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 32px 24px 0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--teal-700);
+    letter-spacing: 0.02em;
+}
+
+.logo-img {
+    height: 28px;
+}
+
+/* Centers whichever screen is active, with generous padding for breathing room */
+.stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px 96px;
+}
+
+/* Shared layout for all three screens (dump / step / celebrate) */
+.view {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+    animation: fade-in 0.5s ease both; /* screen gently fades/slides in when shown */
+}
+
+/* JS toggles this to switch between the three screens */
+.view.hidden {
+    display: none;
+}
+
+h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.hint {
+    margin: 0;
+    color: var(--ink-600);
+    font-size: 0.98rem;
+    line-height: 1.5;
+    max-width: 38ch;
+}
+
+/* Brain dump textarea */
+textarea {
+    width: 100%;
+    padding: 20px 22px;
+    font-size: 1.02rem;
+    font-family: inherit;
+    color: var(--ink-900);
+    background: #ffffff;
+    border: 1.5px solid var(--teal-100);
+    border-radius: var(--radius-md);
+    resize: vertical;
+    line-height: 1.6;
+    box-shadow: 0 8px 24px -16px rgba(42, 82, 78, 0.35);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+textarea::placeholder {
+    color: var(--ink-400);
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--teal-300);
+    box-shadow: 0 0 0 4px var(--teal-100);
+}
+
+/* Applied briefly by JS when the user hits "Start" with an empty textarea —
+   a gentle side-to-side wiggle instead of a red error message */
+textarea.nudge {
+    animation: nudge 0.4s ease;
+    border-color: var(--coral-300);
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+}
+
+/* Main call-to-action button: "Start", "Done", "One more thing" */
+.btn-primary {
+    padding: 16px 36px;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #ffffff;
+    /* Flat button color per the brand guide (this hex IS "buttons/headers") — no gradient */
+    background: var(--teal-700);
+    border-radius: var(--radius-full); /* pill shape */
+    box-shadow: 0 10px 24px -10px rgba(42, 82, 78, 0.55);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px -10px rgba(42, 82, 78, 0.6);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Low-emphasis button: "Skip" — present, but not competing with the primary action */
+.btn-ghost {
+    padding: 10px 18px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--ink-600);
+    background: transparent;
+    border-radius: var(--radius-full);
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn-ghost:hover {
+    /* --teal-50 is now the exact page background, so it'd be invisible here — use the
+       derived wash instead so the hover state still shows. */
+    background: var(--teal-100);
+    color: var(--teal-700);
+}
+
+/* --- Step view (screen 2) --- */
+
+/* Row of small dots showing progress through the steps — a <ul>, so reset its list defaults */
+.progress {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Upcoming step: muted, unfilled */
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--teal-100);
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+/* The step the user is on right now: bigger and teal */
+.dot.current {
+    background: var(--teal-500);
+    transform: scale(1.3);
+}
+
+/* A finished step: the "speck of coral" accent */
+.dot.done {
+    background: var(--coral-400);
+}
+
+.step-label {
+    margin: 0;
+    color: var(--ink-400);
+    font-size: 0.88rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+/* The card holding the current step's text */
+.step-card {
+    width: 100%;
+    padding: 56px 32px;
+    background: linear-gradient(160deg, #ffffff, var(--teal-50));
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 40px -24px rgba(42, 82, 78, 0.45);
+    display: flex;
+    flex-direction: column; /* stacks the skip-note above the step text instead of side by side */
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 140px;
+    /* Powers the fade/scale transition JS triggers via .leaving, both leaving and entering */
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.step-card p {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* JS adds this right before swapping to the next step, then removes it —
+   makes the card fade + shrink out, and fade + grow back in with new text */
+.step-card.leaving {
+    opacity: 0;
+    transform: scale(0.94);
+}
+
+/* This is a <p> wrapping the two buttons, so cancel its default paragraph margin */
+.step-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.skip-note {
+    margin: 0;
+    min-height: 1.4em;
+    color: var(--ink-600);
+    font-size: 0.92rem;
+    transition: opacity 0.4s ease;
+    opacity: 0;
+}
+
+.skip-note.visible {
+    opacity: 1;
+}
+
+/* --- Celebration (screen 3) --- */
+
+/* Soft pulsing coral circle — the calm, non-confetti reward for finishing all steps.
+   No element in the HTML for this on purpose: it's purely decorative, so it's generated
+   here with ::before instead of an extra empty div. */
+#celebrate-view::before {
+    content: "";
+    display: block;
+    width: 88px;
+    height: 88px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle, var(--coral-300), var(--coral-400) 70%, transparent 100%);
+    animation: pulse-soft 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+}
+
+/* Used by .view to gently fade/slide in whenever a screen becomes visible */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Used by textarea.nudge for the empty-input wiggle */
+@keyframes nudge {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+@media (max-width: 400px) {
+    .step-card {
+        padding: 40px 22px;
+    }
+
+    h1 {
+        font-size: 1.35rem;
+    }
+}
