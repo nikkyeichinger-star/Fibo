@@ -6,6 +6,11 @@ const dumpView = document.getElementById('dump-view');
 const stepView = document.getElementById('step-view');
 // Screen 3: calm celebration after the last step
 const celebrateView = document.getElementById('celebrate-view');
+// Screen 4: paralysis mode, the "too much?" SOS screen
+const paralysisView = document.getElementById('paralysis-view');
+
+// Header control
+const sosBtn = document.getElementById('sos-btn'); // "🐢 Too much?" — reachable from every screen
 
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
@@ -24,6 +29,20 @@ const skipNote = document.getElementById('skip-note');         // soft reassuran
 const celebrateMsg = document.getElementById('celebrate-msg'); // random calm message
 const againBtn = document.getElementById('again-btn');         // back to a fresh brain dump
 
+// Screen 4 controls — the 3-stage rescue flow, plus the resting state reached from stage 3
+const paralysisStages = document.querySelectorAll('.paralysis-stage'); // all 4 stage panels, for show/hide
+const stage1 = document.getElementById('paralysis-stage-1');
+const stage2 = document.getElementById('paralysis-stage-2');
+const stage3 = document.getElementById('paralysis-stage-3');
+const restingStage = document.getElementById('paralysis-resting');
+const resetText = document.getElementById('reset-text');               // stage 1's random physical reset
+const resetDoneBtn = document.getElementById('reset-done-btn');        // stage 1 -> stage 2
+const microActionText = document.getElementById('micro-action-text');  // stage 2's random micro-action
+const microDoneBtn = document.getElementById('micro-done-btn');        // stage 2 -> stage 3
+const feelBetterBtn = document.getElementById('feel-better-btn');      // stage 3: "I can continue"
+const feelRestingBtn = document.getElementById('feel-resting-btn');    // stage 3: "I still need rest"
+const paralysisExitBtns = document.querySelectorAll('.paralysis-exit-btn'); // every "I'm okay again" in the flow
+
 // Pool of calm completion messages — one is picked at random, no confetti/streak pressure
 const CELEBRATIONS = [
     'Nicely done 🌿',
@@ -40,6 +59,26 @@ const SKIP_NOTES = [
     'That\'s allowed. Back to it later.',
 ];
 
+// Paralysis mode stage 1: one tiny physical action, to get out of the head and into the body
+const PHYSICAL_RESETS = [
+    'Take 3 deep breaths.',
+    'Put your feet flat on the floor.',
+    'Take a sip of water.',
+    'Unclench your jaw and drop your shoulders.',
+    'Put one hand on something soft.',
+    'Feel your feet on the floor.',
+];
+
+// Paralysis mode stage 2: one absurdly small task, just to break the freeze — not a real task
+const MICRO_ACTIONS = [
+    'Carry the empty mug from your desk to the kitchen. Nothing more.',
+    'Pick up one thing from the floor and put it away.',
+    'Open a window for a moment.',
+    'Put one dish in the sink.',
+    'Straighten one cushion.',
+    'Throw away one piece of trash.',
+];
+
 // The current task's steps, and which one the user is on.
 // Each step is an object — { text, skips } — so its skip count travels with it.
 let steps = [];
@@ -50,9 +89,18 @@ function saveState() {
     localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex }));
 }
 
-// Swap which of the three screens is visible
+// Whichever of the three main screens was active right before paralysis mode
+// was triggered — this is the one place every screen switch passes through,
+// so it's the one place that can reliably notice "what was on screen just now".
+let lastView = null;
+
+// Swap which of the four screens is visible
 function showView(view) {
-    [dumpView, stepView, celebrateView].forEach(v => v.classList.add('hidden'));
+    if (view === paralysisView) {
+        const current = [dumpView, stepView, celebrateView].find(v => !v.classList.contains('hidden'));
+        if (current) lastView = current;
+    }
+    [dumpView, stepView, celebrateView, paralysisView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -162,6 +210,46 @@ function skipStep() {
     }, 320); // roughly matches the .leaving CSS transition duration
 }
 
+// Show one paralysis stage and hide the rest — a second, nested level of view-switching
+// inside paralysis-view itself, alongside the top-level one showView() handles.
+function showParalysisStage(stage) {
+    paralysisStages.forEach(s => s.classList.add('sub-hidden'));
+    stage.classList.remove('sub-hidden');
+}
+
+// "🐢 Too much?" — Fibo takes the wheel: mute the palette and open stage 1 of the rescue flow,
+// instead of asking the user what they want to do.
+function enterParalysis() {
+    resetText.textContent = PHYSICAL_RESETS[Math.floor(Math.random() * PHYSICAL_RESETS.length)];
+    showParalysisStage(stage1);
+    document.body.classList.add('calm');
+    showView(paralysisView);
+}
+
+// Stage 1 "Done" — move to stage 2: one tiny, low-stakes task to break the freeze.
+function startMicroAction() {
+    microActionText.textContent = MICRO_ACTIONS[Math.floor(Math.random() * MICRO_ACTIONS.length)];
+    showParalysisStage(stage2);
+}
+
+// Stage 2 "Done" — ask how it feels. No wrong answer either way.
+function askHowItFeels() {
+    showParalysisStage(stage3);
+}
+
+// Stage 3 "I still need rest" — no task, no pressure, just somewhere to stay as long as needed.
+function restFromParalysis() {
+    showParalysisStage(restingStage);
+}
+
+// Leaves paralysis mode entirely: drops the calm palette and returns to wherever the user
+// actually was — one relevant task, shown the same one-thing-at-a-time way the rest of the
+// app already works. Used by stage 3's "I can continue" and by every "I'm okay again" exit.
+function exitParalysis() {
+    document.body.classList.remove('calm');
+    showView(lastView || dumpView);
+}
+
 // "One more thing" — clear the input and go back to a fresh brain dump.
 function resetToDump() {
     localStorage.removeItem('fibo-state'); // starting over, so there's nothing to resume anymore
@@ -193,6 +281,12 @@ startBtn.addEventListener('click', startFlow);
 doneBtn.addEventListener('click', advance);
 skipBtn.addEventListener('click', skipStep);
 againBtn.addEventListener('click', resetToDump);
+sosBtn.addEventListener('click', enterParalysis);
+resetDoneBtn.addEventListener('click', startMicroAction);
+microDoneBtn.addEventListener('click', askHowItFeels);
+feelBetterBtn.addEventListener('click', exitParalysis);
+feelRestingBtn.addEventListener('click', restFromParalysis);
+paralysisExitBtns.forEach(btn => btn.addEventListener('click', exitParalysis));
 
 // Cmd/Ctrl+Enter in the textarea is a shortcut for clicking "Start"
 dumpInput.addEventListener('keydown', (e) => {

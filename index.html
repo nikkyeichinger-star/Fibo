@@ -10,7 +10,8 @@
 <body>
 
     <header class="app-header">
-        <img src="logo.svg" alt="" class="logo-img"> Fibo
+        <span class="brand"><img src="logo.svg" alt="" class="logo-img"> Fibo</span>
+        <button id="sos-btn" class="btn-sos" aria-label="Too much? Tap for a calm micro-step">🐢 Too much?</button>
     </header>
 
     <main class="stage">
@@ -43,6 +44,48 @@
             <h1 id="celebrate-msg">Nicely done 🌿</h1> <!-- JS swaps this for a random message -->
             <p class="hint">Nothing to do, for a moment.</p>
             <button id="again-btn" class="btn-primary">One more thing</button>
+        </section>
+
+        <!-- Screen 4: paralysis mode. Reachable from anywhere via the header's "Too much?" button.
+             Fibo takes the wheel here instead of asking what to do: a fixed 3-step rescue flow
+             (physical reset -> tiny micro-action -> guilt-free choice), one stage visible at a time. -->
+        <section id="paralysis-view" class="view hidden">
+
+            <!-- Stage 1: physical reset — one tiny bodily action, to get out of the head and into the body -->
+            <div id="paralysis-stage-1" class="paralysis-stage">
+                <p class="hint">You don't have to perform anything right now. Let's just breathe first.</p>
+                <article class="step-card">
+                    <p id="reset-text">…</p> <!-- random physical reset, set by JS -->
+                </article>
+                <button id="reset-done-btn" class="btn-primary">Done ✓</button>
+                <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
+            </div>
+
+            <!-- Stage 2: micro-action — one absurdly small task, just to break the freeze -->
+            <div id="paralysis-stage-2" class="paralysis-stage sub-hidden">
+                <article class="step-card">
+                    <p id="micro-action-text">…</p> <!-- random micro-action, set by JS -->
+                </article>
+                <button id="micro-done-btn" class="btn-primary">Done ✓</button>
+                <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
+            </div>
+
+            <!-- Stage 3: guilt-free choice — no wrong answer either way -->
+            <div id="paralysis-stage-3" class="paralysis-stage sub-hidden">
+                <h1>How does it feel?</h1>
+                <p class="step-actions">
+                    <button id="feel-better-btn" class="btn-primary">I can continue</button>
+                    <button id="feel-resting-btn" class="btn-ghost">I still need rest</button>
+                </p>
+            </div>
+
+            <!-- Resting state: reached from stage 3 when the answer is "I still need rest" -->
+            <div id="paralysis-resting" class="paralysis-stage sub-hidden">
+                <h1>Totally okay.</h1>
+                <p class="hint">Stay seated for as long as you need. I'll keep your things safe for later.</p>
+                <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
+            </div>
+
         </section>
 
     </main>

@@ -28,10 +28,37 @@ Fibo, naar Fibonacci: 1, 1, 2, 3, 5, 8... Kleine stapjes die op elkaar voortbouw
 
 ## De modules
 
-1. **De Ontdooier** *(v1, in aanbouw)* — tegen ADHD-verlamming. Brain dump je taak of chaos → Fibo knipt het in mini-stapjes → je ziet er één tegelijk → klaar = zichtbare beloning.
+1. **De Ontdooier** *(gebouwd)* — tegen ADHD-verlamming. Brain dump je taak of chaos → Fibo knipt het in mini-stapjes → je ziet er één tegelijk → klaar = zichtbare beloning.
 2. **Zachte planner** — plannen op energie in plaats van tijd. Wat kan vandaag, gegeven hoe je je voelt? Niets afgekregen is geen falen maar data.
 3. **Leren & focus** — focus-sessies in chunks, afgestemd op wisselende concentratie, met ingebouwde pauzes.
-4. **Energie & stemming** *(later)* — lichte tracking die de andere modules slimmer maakt, nooit een verplicht dagboek.
+4. **Energie & stemming** — lichte tracking die de andere modules slimmer maakt, nooit een verplicht dagboek.
+
+## Feature-backlog (Nikky's brain dump, aug 2026)
+
+**Kernfeatures — de volgende bouwdoelen:**
+
+- 🎙️ **Spraak Brain Dump** — één grote knop, inspreken wat er in je hoofd zit. AI haalt ruis weg en sorteert automatisch in taken / herinneringen / losse gedachten. *Waarom: typen kost executieve energie.* (Spraak kan gratis via de browser; het AI-sorteren heeft de Claude API nodig.)
+- 🐢 **Paralysis Mode** — noodknop voor freeze/overprikkeling: scherm wordt direct prikkelarm (bijna monochroom), alle lijsten verdwijnen, Fibo stelt precies één micro-stapje voor ("haal 1 glas water", "zit 1 minuut rustig").
+- 🔋 **Energy Check-In (spoon theory)** — bij het openen: "hoe is je energie vandaag?" (laag/gemiddeld/hoog). Op lage-energie-dagen verbergt Fibo zware taken en toont alleen het hoognodige.
+- ⚖️ **Taakzwaarte-meter** — per taak aangeven (of laten inschatten) hoe zwaar hij is, zodat de energy check-in weet wat hij moet verbergen.
+- 🛡️ **No-Shame Routines** — simpele ochtend-/avondroutines. Geen streaks, geen "je loopt achter". Na 3 weken weg: "Fijn dat je er weer bent. Waar zullen we rustig mee beginnen?"
+- 📅 **Zachte planner** — zie module 2.
+- 🙂 **Dagelijkse/wekelijkse moodcheck** — lichte stemmingstracking, voedt de andere modules.
+
+**Paralysis Mode-uitbreidingen (na de basisversie):**
+
+- 📥 **Dump & Hide** — "parkeer je hoofd": alles inspreken/typen wat stresst; het schildpadje bergt het zichtbaar op in een kluisje. "Ik bewaar dit veilig. Je hoeft er even niet aan te denken." *Prioriteit 1.*
+- 🔊 **Sensorische audio** — 1-tap brown noise / regen / zachte lofi, direct in het paralysis-scherm. Brown noise kan gratis gegenereerd worden via de Web Audio API. *Prioriteit 2.*
+- 🐢 **Body Doubling Light** — het schildpadje "doet mee" met een subtiele animatie tijdens een micro-stapje: je doet het niet alleen. *Prioriteit 3.*
+- 🎲 **Decide for Me** — anti-keuzestress: Fibo kiest één taak o.b.v. tijd + energie; gebruiker klikt alleen "ja" of "andere". Hoort in de gewone modus; heeft Energy Check-In nodig.
+- 🆘 **Noodcontact** — klein veilig knopje dat WhatsApp/berichten opent met een vooraf ingesteld lief berichtje aan een vertrouwenspersoon, al ingevuld.
+- ⚠️ **Ontwerpregel:** het paralysis-scherm blijft het léégste scherm van de app: één micro-stapje, één geluidsknopje, hooguit één stil deurtje naar meer. Nooit een dashboard.
+
+**Advanced — voor daarna:**
+
+- 🔀 **Shuffle Routines** — structuur blijft (autisme), kleine speelse variatie per dag (ADHD-dopamine): "poets je tanden vandaag met je andere hand".
+- ⏳ **Soft Transition Warnings** — zachte seintjes 15 en 5 min vóór een taakwissel, om rustig uit hyperfocus te komen.
+- 🎧 **Body Doubling Timer / Single Task Focus** — één kalme timer met visuele afteller en rustgevende geluiden (bruine ruis, regen).
 
 ## Ontwerpprincipes
 
