@@ -8,6 +8,8 @@ const stepView = document.getElementById('step-view');
 const celebrateView = document.getElementById('celebrate-view');
 // Screen 4: paralysis mode, the "too much?" SOS screen
 const paralysisView = document.getElementById('paralysis-view');
+// Screen 5: the vault, thoughts parked during paralysis mode
+const vaultView = document.getElementById('vault-view');
 
 // Header control
 const sosBtn = document.getElementById('sos-btn'); // "🐢 Too much?" — reachable from every screen
@@ -15,6 +17,8 @@ const sosBtn = document.getElementById('sos-btn'); // "🐢 Too much?" — reach
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
 const startBtn = document.getElementById('start-btn');   // "Start with this one thing"
+const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
+const vaultCountText = document.getElementById('vault-count-text');
 
 // Screen 2 controls
 const progressDots = document.getElementById('progress-dots'); // container for the little step dots
@@ -43,6 +47,20 @@ const feelBetterBtn = document.getElementById('feel-better-btn');      // stage 
 const feelRestingBtn = document.getElementById('feel-resting-btn');    // stage 3: "I still need rest"
 const paralysisExitBtns = document.querySelectorAll('.paralysis-exit-btn'); // every "I'm okay again" in the flow
 
+// Parking stage (a branch off stage 1) + the confirmation stage after it
+const parkThoughtBtn = document.getElementById('park-thought-btn'); // stage 1: "Something won't let go"
+const parkingStage = document.getElementById('paralysis-parking');
+const vaultInput = document.getElementById('vault-input');          // what's stuck, in the user's own words
+const vaultSaveBtn = document.getElementById('vault-save-btn');     // "Put it away" — parks the thought
+const parkCancelBtn = document.getElementById('park-cancel-btn');   // "Never mind" — back to stage 1, still calm
+const safeStage = document.getElementById('paralysis-safe');
+const safeMsg = document.getElementById('safe-msg');                  // random calming line, set on each park
+const safeContinueBtn = document.getElementById('safe-continue-btn'); // "Continue" — back into the rescue flow
+
+// Screen 5 controls
+const vaultList = document.getElementById('vault-list');       // container for the parked-thought <li>s
+const vaultBackBtn = document.getElementById('vault-back-btn'); // "← Back" to the dump screen
+
 // Pool of calm completion messages — one is picked at random, no confetti/streak pressure
 const CELEBRATIONS = [
     'Nicely done 🌿',
@@ -57,6 +75,16 @@ const SKIP_NOTES = [
     'No rush. It\'ll be right there when you\'re ready.',
     'Okay, moving on for now. 🍃',
     'That\'s allowed. Back to it later.',
+];
+
+// Pool of calming lines shown right after a thought is parked in the vault —
+// one is picked at random, so "Safe." never reads the exact same way twice
+const VAULT_REASSURANCES = [
+    'It\'s tucked away in your vault. You can come back to it whenever you\'re ready.',
+    'Out of your head, not out of existence. It\'ll keep. 🌙',
+    'You don\'t have to hold onto it right now. That\'s what the vault is for.',
+    'Noted, and set down. Nothing more to do with it for now. 🤍',
+    'It\'s not going anywhere — and neither are you having to think about it right now.',
 ];
 
 // Paralysis mode stage 1: one tiny physical action, to get out of the head and into the body
@@ -89,18 +117,39 @@ function saveState() {
     localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex }));
 }
 
-// Whichever of the three main screens was active right before paralysis mode
+// Thoughts parked during paralysis mode — a separate localStorage key from the current
+// task, since a parked thought has nothing to do with whatever's in `steps`.
+// Each entry is { text, when } — when is a Date.now() timestamp.
+let vault = [];
+
+function saveVault() {
+    localStorage.setItem('fibo-vault', JSON.stringify(vault));
+}
+
+function loadVault() {
+    const raw = localStorage.getItem('fibo-vault');
+    if (raw === null) return;
+
+    try {
+        vault = JSON.parse(raw);
+    } catch (_) {
+        // storage got corrupted somehow — just forget it and start fresh
+        localStorage.removeItem('fibo-vault');
+    }
+}
+
+// Whichever of the main screens was active right before paralysis mode
 // was triggered — this is the one place every screen switch passes through,
 // so it's the one place that can reliably notice "what was on screen just now".
 let lastView = null;
 
-// Swap which of the four screens is visible
+// Swap which of the five screens is visible
 function showView(view) {
     if (view === paralysisView) {
-        const current = [dumpView, stepView, celebrateView].find(v => !v.classList.contains('hidden'));
+        const current = [dumpView, stepView, celebrateView, vaultView].find(v => !v.classList.contains('hidden'));
         if (current) lastView = current;
     }
-    [dumpView, stepView, celebrateView, paralysisView].forEach(v => v.classList.add('hidden'));
+    [dumpView, stepView, celebrateView, paralysisView, vaultView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -145,6 +194,82 @@ function renderStep() {
     renderProgress();
     stepLabel.textContent = `Step ${currentIndex + 1} of ${steps.length}`;
     stepText.textContent = steps[currentIndex].text;
+}
+
+// Show/hide the dump screen's "🔒 N parked" line depending on whether the vault has anything in it.
+function renderVaultLink() {
+    if (vault.length === 0) {
+        vaultLinkBtn.classList.add('sub-hidden');
+        return;
+    }
+    vaultCountText.textContent = String(vault.length);
+    vaultLinkBtn.classList.remove('sub-hidden');
+}
+
+// Turns a parked thought's timestamp into a soft, relative description — never an exact
+// clock time, since the point is a gentle sense of "how long ago", not precision.
+function formatParkedWhen(when) {
+    const parked = new Date(when);
+    const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const daysAgo = Math.round((startOfDay(new Date()) - startOfDay(parked)) / 86400000);
+
+    if (daysAgo === 0) {
+        const hour = parked.getHours();
+        if (hour < 12) return 'Parked this morning';
+        if (hour < 18) return 'Parked this afternoon';
+        return 'Parked this evening';
+    }
+    if (daysAgo === 1) return 'Parked yesterday';
+    if (daysAgo < 7) return `Parked on ${parked.toLocaleDateString('en-US', { weekday: 'long' })}`;
+    return `Parked on ${parked.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+}
+
+// Rebuild the vault's list of parked thoughts — same loop/createElement/appendChild
+// shape as renderProgress, just with a text + timestamp + "Let it go" button per entry
+// instead of a dot. An empty vault gets a line of its own instead of staring at nothing.
+function renderVaultList() {
+    vaultList.innerHTML = '';
+
+    if (vault.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'vault-empty';
+        empty.textContent = 'All quiet in here. 🐢';
+        vaultList.appendChild(empty);
+        return;
+    }
+
+    vault.forEach((entry, i) => {
+        const item = document.createElement('li'); // vaultList is a <ul>, so each entry is a list item
+        item.className = 'vault-item';
+
+        const text = document.createElement('p');
+        text.className = 'vault-item-text';
+        text.textContent = entry.text;
+
+        const meta = document.createElement('p'); // groups the timestamp + button, same trick .step-actions uses
+        meta.className = 'vault-item-meta';
+
+        const time = document.createElement('time');
+        time.dateTime = new Date(entry.when).toISOString();
+        time.textContent = formatParkedWhen(entry.when);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-ghost';
+        removeBtn.textContent = 'Let it go';
+        removeBtn.addEventListener('click', () => {
+            vault.splice(i, 1); // this entry is done being parked — drop it and re-save
+            saveVault();
+            renderVaultList();
+            renderVaultLink();
+        });
+
+        meta.appendChild(time);
+        meta.appendChild(removeBtn);
+
+        item.appendChild(text);
+        item.appendChild(meta);
+        vaultList.appendChild(item);
+    });
 }
 
 // "Start with this one thing" — parse the brain dump into steps and move to screen 2.
@@ -242,6 +367,56 @@ function restFromParalysis() {
     showParalysisStage(restingStage);
 }
 
+// Stage 1 "Something won't let go" — branch off into the parking stage instead of the reset.
+function openParking() {
+    vaultInput.value = '';
+    vaultInput.classList.remove('nudge');
+    showParalysisStage(parkingStage);
+}
+
+// Parking stage "Never mind" — back to stage 1, not out of paralysis mode entirely.
+// Unlike the other exits, this one doesn't touch document.body.classList('calm') or
+// showView(): whoever's here might still be overwhelmed, just misclicked into parking.
+function cancelParking() {
+    showParalysisStage(stage1);
+}
+
+// Parking stage "Put it away" — save the thought to the vault, then let the parking stage
+// fly away before swapping to the "Safe." confirmation. The swap waits for the animation
+// to actually finish (animationend) rather than guessing a setTimeout duration; { once: true }
+// means this one-off listener cleans itself up instead of piling up on every park.
+function parkThought() {
+    const text = vaultInput.value.trim();
+    if (text === '') {
+        vaultInput.classList.remove('nudge');
+        void vaultInput.offsetWidth; // restart the CSS animation even if it just played
+        vaultInput.classList.add('nudge');
+        vaultInput.focus();
+        return;
+    }
+
+    vault.push({ text, when: Date.now() });
+    saveVault();
+    renderVaultLink();
+    safeMsg.textContent = VAULT_REASSURANCES[Math.floor(Math.random() * VAULT_REASSURANCES.length)];
+
+    parkingStage.classList.add('fly-away');
+    parkingStage.addEventListener('animationend', () => {
+        parkingStage.classList.remove('fly-away');
+        showParalysisStage(safeStage);
+    }, { once: true });
+}
+
+// The vault, on its own top-level screen — only reachable from the dump screen's vault line.
+function openVault() {
+    renderVaultList();
+    showView(vaultView);
+}
+
+function closeVault() {
+    showView(dumpView);
+}
+
 // Leaves paralysis mode entirely: drops the calm palette and returns to wherever the user
 // actually was — one relevant task, shown the same one-thing-at-a-time way the rest of the
 // app already works. Used by stage 3's "I can continue" and by every "I'm okay again" exit.
@@ -287,6 +462,12 @@ microDoneBtn.addEventListener('click', askHowItFeels);
 feelBetterBtn.addEventListener('click', exitParalysis);
 feelRestingBtn.addEventListener('click', restFromParalysis);
 paralysisExitBtns.forEach(btn => btn.addEventListener('click', exitParalysis));
+parkThoughtBtn.addEventListener('click', openParking);
+vaultSaveBtn.addEventListener('click', parkThought);
+parkCancelBtn.addEventListener('click', cancelParking);
+safeContinueBtn.addEventListener('click', startMicroAction);
+vaultLinkBtn.addEventListener('click', openVault);
+vaultBackBtn.addEventListener('click', closeVault);
 
 // Cmd/Ctrl+Enter in the textarea is a shortcut for clicking "Start"
 dumpInput.addEventListener('keydown', (e) => {
@@ -296,3 +477,5 @@ dumpInput.addEventListener('keydown', (e) => {
 });
 
 loadState();
+loadVault();
+renderVaultLink();

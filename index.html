@@ -22,6 +22,7 @@
             <p class="hint">Write it down. Or break it into tiny steps right away — one per line.</p>
             <textarea id="dump-input" rows="5" aria-label="Brain dump" placeholder="e.g.&#10;Sort the laundry&#10;Put it in the machine&#10;Add detergent"></textarea>
             <button id="start-btn" class="btn-primary">Start with this one thing</button>
+            <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>
         </section>
 
         <!-- Screen 2: one step at a time. Hidden until "Start" is clicked. -->
@@ -52,40 +53,66 @@
         <section id="paralysis-view" class="view hidden">
 
             <!-- Stage 1: physical reset — one tiny bodily action, to get out of the head and into the body -->
-            <div id="paralysis-stage-1" class="paralysis-stage">
+            <section id="paralysis-stage-1" class="paralysis-stage">
                 <p class="hint">You don't have to perform anything right now. Let's just breathe first.</p>
                 <article class="step-card">
                     <p id="reset-text">…</p> <!-- random physical reset, set by JS -->
                 </article>
                 <button id="reset-done-btn" class="btn-primary">Done ✓</button>
+                <button id="park-thought-btn" class="btn-ghost">Something won't let go</button>
                 <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
-            </div>
+            </section>
+
+            <!-- Parking stage: a branch off stage 1 — write down whatever's stuck, so it's off your
+                 mind without having to deal with it right now. Reached only via "Something won't let go". -->
+            <section id="paralysis-parking" class="paralysis-stage sub-hidden">
+                <p class="hint">Write it down. It'll be right here when you're ready — not now.</p>
+                <textarea id="vault-input" rows="3" aria-label="What's stuck in your head" placeholder="e.g. Don't forget to reply to Sam"></textarea>
+                <button id="vault-save-btn" class="btn-primary">Put it away</button>
+                <button id="park-cancel-btn" class="btn-ghost">Never mind</button>
+            </section>
+
+            <!-- Confirmation after parking a thought — reassurance, then back into the rescue flow -->
+            <section id="paralysis-safe" class="paralysis-stage sub-hidden">
+                <h1>Safe.</h1>
+                <p class="hint" id="safe-msg">…</p> <!-- random calming reassurance, set by JS -->
+                <button id="safe-continue-btn" class="btn-primary">Continue</button>
+            </section>
 
             <!-- Stage 2: micro-action — one absurdly small task, just to break the freeze -->
-            <div id="paralysis-stage-2" class="paralysis-stage sub-hidden">
+            <section id="paralysis-stage-2" class="paralysis-stage sub-hidden">
                 <article class="step-card">
                     <p id="micro-action-text">…</p> <!-- random micro-action, set by JS -->
                 </article>
                 <button id="micro-done-btn" class="btn-primary">Done ✓</button>
                 <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
-            </div>
+            </section>
 
             <!-- Stage 3: guilt-free choice — no wrong answer either way -->
-            <div id="paralysis-stage-3" class="paralysis-stage sub-hidden">
+            <section id="paralysis-stage-3" class="paralysis-stage sub-hidden">
                 <h1>How does it feel?</h1>
                 <p class="step-actions">
                     <button id="feel-better-btn" class="btn-primary">I can continue</button>
                     <button id="feel-resting-btn" class="btn-ghost">I still need rest</button>
                 </p>
-            </div>
+            </section>
 
             <!-- Resting state: reached from stage 3 when the answer is "I still need rest" -->
-            <div id="paralysis-resting" class="paralysis-stage sub-hidden">
+            <section id="paralysis-resting" class="paralysis-stage sub-hidden">
                 <h1>Totally okay.</h1>
                 <p class="hint">Stay seated for as long as you need. I'll keep your things safe for later.</p>
                 <button class="btn-ghost paralysis-exit-btn">I'm okay again</button>
-            </div>
+            </section>
 
+        </section>
+
+        <!-- Screen 5: the vault. Thoughts parked during paralysis mode, waiting until you're ready for them.
+             Only reachable from the dump screen's vault line — never pushed on you otherwise. -->
+        <section id="vault-view" class="view hidden">
+            <h1>Your vault</h1>
+            <p class="hint">Nothing urgent. Just parked here until you're ready.</p>
+            <ul class="vault-list" id="vault-list"></ul> <!-- filled in by JS, one <li> per parked thought -->
+            <button id="vault-back-btn" class="btn-ghost">← Back</button>
         </section>
 
     </main>

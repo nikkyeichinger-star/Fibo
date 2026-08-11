@@ -359,8 +359,79 @@ button {
     animation: fade-in 0.5s ease both;
 }
 
-.paralysis-stage.sub-hidden {
+/* Generic "hide this one element" utility — used for paralysis stages, and anywhere else
+   a piece of UI needs to be toggled without it being a whole top-level .view */
+.sub-hidden {
     display: none;
+}
+
+/* Plays once when a parked thought is handed off to the vault: the parking stage shrinks,
+   slides down and fades — like it's dropping out of sight. JS removes the class and swaps
+   to the "Safe." stage when this finishes (animationend), never with a timer. */
+@keyframes fly-away {
+    to {
+        transform: translateY(40px) scale(0.85);
+        opacity: 0;
+    }
+}
+
+.fly-away {
+    animation: fly-away 0.5s ease forwards;
+}
+
+/* --- The vault --- */
+
+.vault-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.vault-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px -16px rgba(42, 82, 78, 0.25);
+    text-align: left;
+}
+
+.vault-item-text {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.5;
+    color: var(--ink-900);
+}
+
+/* This is a <p> wrapping the timestamp + button, same trick .step-actions uses to cancel
+   the default paragraph margin while still being a flex row */
+.vault-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+}
+
+.vault-item-meta time {
+    font-size: 0.82rem;
+    color: var(--ink-400);
+}
+
+/* Shown instead of the list when nothing's parked — an empty vault still gets a line,
+   not silence */
+.vault-empty {
+    margin: 0;
+    padding: 24px 0;
+    color: var(--ink-400);
+    font-size: 0.98rem;
+    text-align: center;
 }
 
 /* The whole app reads color exclusively through the tokens in :root, so re-defining
