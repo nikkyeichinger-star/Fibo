@@ -10,12 +10,20 @@ const celebrateView = document.getElementById('celebrate-view');
 const paralysisView = document.getElementById('paralysis-view');
 // Screen 5: the vault, thoughts parked during paralysis mode
 const vaultView = document.getElementById('vault-view');
+// Screen 0: energy check-in, asked once per day before anything else
+const energyView = document.getElementById('energy-view');
 
-// Header control
+// Header controls
 const sosBtn = document.getElementById('sos-btn'); // "🐢 Too much?" — reachable from every screen
+const energyBadgeBtn = document.getElementById('energy-badge-btn'); // always-visible battery icon, tap to recalibrate
+
+// Screen 0 controls
+const energyBtns = document.querySelectorAll('.btn-energy'); // 🪫/🔋/⚡ — level read from btn.dataset.level
+const energyUnsureBtn = document.getElementById('energy-unsure-btn'); // "🤷 No idea" — plays it safe as Low
 
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
+const dumpHint = document.getElementById('dump-hint');    // swapped for a softer line on a Low day
 const startBtn = document.getElementById('start-btn');   // "Start with this one thing"
 const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
 const vaultCountText = document.getElementById('vault-count-text');
@@ -68,6 +76,9 @@ const CELEBRATIONS = [
     'Small step, still counts ✨',
     'Nothing left to do 🤍',
 ];
+
+// Shown whenever a Low day automatically parks the overflow of a task — see capStepsForLowEnergy()
+const LOW_ENERGY_PARK_NOTE = 'Today we\'re keeping it light — the rest is waiting safely in your vault for whenever you\'re ready. 🌙';
 
 // Pool of soft reassurances shown after a skip — no pressure, no guilt
 const SKIP_NOTES = [
@@ -138,18 +149,85 @@ function loadVault() {
     }
 }
 
+// Today's energy level — asked once per day, before anything else.
+// { level, date } — date is a toDateString() like "Tue Aug 11 2026" (no time), so a
+// stale entry from a previous day is a plain string mismatch, nothing to parse.
+let energy = null;
+
+function saveEnergy(level) {
+    energy = { level, date: new Date().toDateString() };
+    localStorage.setItem('fibo-energy', JSON.stringify(energy));
+    applyEnergyEffects();
+}
+
+function loadEnergy() {
+    const raw = localStorage.getItem('fibo-energy');
+    if (raw === null) return;
+
+    try {
+        energy = JSON.parse(raw);
+    } catch (_) {
+        // storage got corrupted somehow — just forget it and start fresh
+        localStorage.removeItem('fibo-energy');
+    }
+}
+
+// Whether today's check-in still needs asking: either there's never been one, or the
+// last one was on a different day.
+function needsEnergyCheckIn() {
+    return energy === null || energy.date !== new Date().toDateString();
+}
+
+// True only on an actual Low day. "No idea" is deliberately saved as 'low' itself (see the
+// energy-unsure-btn handler) — playing it safe rather than adding a third neutral state.
+function isLowEnergy() {
+    return energy !== null && energy.level === 'low';
+}
+
+// Swaps the dump screen's hint for a level-appropriate line.
+function updateDumpHint() {
+    if (isLowEnergy()) {
+        dumpHint.textContent = 'Just the essentials today. One tiny thing is plenty.';
+    } else if (energy?.level === 'high') {
+        dumpHint.textContent = 'Plenty of room for something bigger today. Just remember to drink some water and take a break now and then. ⚡';
+    } else {
+        dumpHint.textContent = 'Write it down. Or break it into tiny steps right away — one per line.';
+    }
+}
+
+// Keeps the header's battery badge icon in sync with today's level.
+function updateEnergyBadge() {
+    const icons = { low: '🪫', medium: '🔋', high: '⚡' };
+    energyBadgeBtn.textContent = icons[energy?.level] ?? '🔋';
+}
+
+// Low/High get a light visual treatment (see body.low-battery / body.high-battery in the
+// CSS) — Medium is the default palette, so it just means neither class is present.
+function updateEnergyTheme() {
+    document.body.classList.toggle('low-battery', energy?.level === 'low');
+    document.body.classList.toggle('high-battery', energy?.level === 'high');
+}
+
+// Everything that depends on today's energy level, applied together: the dump-screen hint,
+// the Low/High visual treatment, and the battery badge's icon.
+function applyEnergyEffects() {
+    updateDumpHint();
+    updateEnergyTheme();
+    updateEnergyBadge();
+}
+
 // Whichever of the main screens was active right before paralysis mode
 // was triggered — this is the one place every screen switch passes through,
 // so it's the one place that can reliably notice "what was on screen just now".
 let lastView = null;
 
-// Swap which of the five screens is visible
+// Swap which of the six screens is visible
 function showView(view) {
     if (view === paralysisView) {
-        const current = [dumpView, stepView, celebrateView, vaultView].find(v => !v.classList.contains('hidden'));
+        const current = [dumpView, stepView, celebrateView, vaultView, energyView].find(v => !v.classList.contains('hidden'));
         if (current) lastView = current;
     }
-    [dumpView, stepView, celebrateView, paralysisView, vaultView].forEach(v => v.classList.add('hidden'));
+    [dumpView, stepView, celebrateView, paralysisView, vaultView, energyView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -272,6 +350,23 @@ function renderVaultList() {
     });
 }
 
+// On a Low day, only a couple of steps stay active — the rest moves to the vault
+// automatically. No warning, no red cross, just quietly parked somewhere safe for later.
+// Used both when starting a fresh task and when the energy level changes mid-task (the
+// energy-badge handlers below also call this). Returns whether it actually parked anything.
+function capStepsForLowEnergy() {
+    if (!isLowEnergy()) return false;
+    const remaining = steps.length - currentIndex;
+    if (remaining <= 2) return false;
+
+    const overflow = steps.splice(currentIndex + 2); // keep the current step + 1 more
+    overflow.forEach(step => vault.push({ text: step.text, when: Date.now() }));
+    saveVault();
+    renderVaultLink();
+    saveState();
+    return true;
+}
+
 // "Start with this one thing" — parse the brain dump into steps and move to screen 2.
 // If nothing was typed, gently nudge the textarea instead of showing a harsh error.
 function startFlow() {
@@ -284,9 +379,18 @@ function startFlow() {
         return;
     }
     currentIndex = 0;
+    const capped = capStepsForLowEnergy();
     saveState();
     renderStep();
     showView(stepView);
+
+    // Reuses the same skip-note element/CSS the post-skip reassurances already use.
+    if (capped) {
+        skipNote.textContent = LOW_ENERGY_PARK_NOTE;
+        skipNote.classList.add('visible');
+    } else {
+        skipNote.classList.remove('visible');
+    }
 }
 
 // "Done ✓" — the step is finished, so we move on to the next one.
@@ -300,7 +404,14 @@ function advance() {
         stepCard.classList.remove('leaving'); // fades back in with the new content
         skipNote.classList.remove('visible');
         if (currentIndex >= steps.length) {
-            localStorage.removeItem('fibo-state'); // the whole task is done, nothing left to resume
+            // The whole task is done — clear it from memory too, not just storage. Otherwise
+            // `steps` still holds the finished array and `currentIndex` sits one past its end,
+            // so anything checking "is there a task to resume?" (like goToStartScreen) would
+            // wrongly say yes, and then crash trying to read the step that isn't there.
+            steps = [];
+            currentIndex = 0;
+            dumpInput.value = ''; // so a fresh dump screen doesn't show the just-finished task's text
+            localStorage.removeItem('fibo-state'); // nothing left to resume
             celebrateMsg.textContent = CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
             showView(celebrateView);
         } else {
@@ -433,8 +544,9 @@ function resetToDump() {
     dumpInput.focus();
 }
 
-// On startup: if there's a task saved from last time, jump straight back into it
-// instead of showing an empty brain dump.
+// On startup: load a task saved from last time into memory, if there is one. Doesn't
+// decide navigation itself — the energy check-in (screen 0) may need to go first, so
+// what to actually show is decided once, after all startup data is loaded.
 function loadState() {
     const raw = localStorage.getItem('fibo-state');
     if (raw === null) return;
@@ -443,11 +555,33 @@ function loadState() {
         const saved = JSON.parse(raw);
         steps = saved.steps;
         currentIndex = saved.currentIndex;
-        renderStep();
-        showView(stepView);
     } catch (_) {
         // storage got corrupted somehow — just forget it and start fresh
         localStorage.removeItem('fibo-state');
+    }
+}
+
+// Saves the chosen level, re-caps the current task if that just made today Low (works both
+// at the initial check-in and when recalibrating mid-day via the battery badge), and lands
+// on whichever screen actually applies.
+function chooseEnergy(level) {
+    saveEnergy(level);
+    const parked = capStepsForLowEnergy();
+    goToStartScreen();
+    if (parked) {
+        skipNote.textContent = LOW_ENERGY_PARK_NOTE;
+        skipNote.classList.add('visible');
+    }
+}
+
+// Where to land once the energy check-in is settled (today's, or none needed): resume
+// a task that's already in progress, or start a fresh brain dump.
+function goToStartScreen() {
+    if (steps.length > 0) {
+        renderStep();
+        showView(stepView);
+    } else {
+        showView(dumpView);
     }
 }
 
@@ -468,6 +602,9 @@ parkCancelBtn.addEventListener('click', cancelParking);
 safeContinueBtn.addEventListener('click', startMicroAction);
 vaultLinkBtn.addEventListener('click', openVault);
 vaultBackBtn.addEventListener('click', closeVault);
+energyBtns.forEach(btn => btn.addEventListener('click', () => chooseEnergy(btn.dataset.level)));
+energyUnsureBtn.addEventListener('click', () => chooseEnergy('low')); // plays it safe; the badge can scale it up later
+energyBadgeBtn.addEventListener('click', () => showView(energyView)); // recalibrate any time, no daily gate
 
 // Cmd/Ctrl+Enter in the textarea is a shortcut for clicking "Start"
 dumpInput.addEventListener('keydown', (e) => {
@@ -476,6 +613,18 @@ dumpInput.addEventListener('keydown', (e) => {
     }
 });
 
+// Startup: load everything first, decide navigation once. Two conditions want a say in
+// what shows first — an unanswered energy check-in, and a resumable task — and they don't
+// agree, so the decision has to happen after both are known: energy always goes first when
+// it's needed, and only once it's settled does whether-there's-a-task decide where next.
 loadState();
 loadVault();
 renderVaultLink();
+loadEnergy();
+applyEnergyEffects();
+
+if (needsEnergyCheckIn()) {
+    showView(energyView);
+} else {
+    goToStartScreen();
+}

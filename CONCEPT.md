@@ -39,7 +39,7 @@ Fibo, naar Fibonacci: 1, 1, 2, 3, 5, 8... Kleine stapjes die op elkaar voortbouw
 
 - 🎙️ **Spraak Brain Dump** — één grote knop, inspreken wat er in je hoofd zit. AI haalt ruis weg en sorteert automatisch in taken / herinneringen / losse gedachten. *Waarom: typen kost executieve energie.* (Spraak kan gratis via de browser; het AI-sorteren heeft de Claude API nodig.)
 - 🐢 **Paralysis Mode** — noodknop voor freeze/overprikkeling: scherm wordt direct prikkelarm (bijna monochroom), alle lijsten verdwijnen, Fibo stelt precies één micro-stapje voor ("haal 1 glas water", "zit 1 minuut rustig").
-- 🔋 **Energy Check-In (spoon theory)** — bij het openen: "hoe is je energie vandaag?" (laag/gemiddeld/hoog). Op lage-energie-dagen verbergt Fibo zware taken en toont alleen het hoognodige.
+- 🔋 **Energy Check-In (spoon theory)** — ✅ gebouwd: dagelijkse batterijvraag ("No idea" telt veilig als Low), herkalibratie via header-badge, aangepaste teksten en thema per niveau, en op Low-dagen max 2 actieve stapjes — de rest parkeert automatisch in de kluis met een zacht briefje. *Nog open: "bring them back"-knop, en kluis-onderscheid tussen gedachten en geparkeerde stapjes.*
 - ⚖️ **Taakzwaarte-meter** — per taak aangeven (of laten inschatten) hoe zwaar hij is, zodat de energy check-in weet wat hij moet verbergen.
 - 🛡️ **No-Shame Routines** — simpele ochtend-/avondroutines. Geen streaks, geen "je loopt achter". Na 3 weken weg: "Fijn dat je er weer bent. Waar zullen we rustig mee beginnen?"
 - 📅 **Zachte planner** — zie module 2.
@@ -96,6 +96,8 @@ Fibo's positie: **de integratie** — niet elke feature beter, maar het geheel v
 
 - Wat helpt Nikky persoonlijk het best bij verlamming (mini-stapje, body double, timer, beloning)? → bepaalt wat de Ontdooier als eerste kan.
 - Hoe knipt v1 taken op: zelf typen, slimme templates, of AI (v2)?
+- De kluis mengt nu twee soorten inhoud: "gedachten die stress geven" (geparkeerd vanuit paralysis mode) en "halve taken die niet pasten op een Low-dag" (geparkeerd vanuit de energy check-in). Als de kluis-lijst ooit uitgebreid wordt, is onderscheid het overwegen waard — bijv. een `type`-veld ("parked thought" vs "saved for a better day") in plaats van één ongedifferentieerde lijst.
+- Fibo verplaatst nu stappen (het overschot op een Low-dag) zonder te vragen. Het geruststellende briefje maakt veel goed, maar een "bring them back"-knopje (terugzetten in de actieve taak) is het overwegen waard zodra dat relevant wordt.
 
 ## Ontwerpbeslissing: overslaan is een signaal
 

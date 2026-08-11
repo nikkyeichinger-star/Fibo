@@ -11,15 +11,30 @@
 
     <header class="app-header">
         <span class="brand"><img src="logo.svg" alt="" class="logo-img"> Fibo</span>
-        <button id="sos-btn" class="btn-sos" aria-label="Too much? Tap for a calm micro-step">🐢 Too much?</button>
+        <span class="header-actions">
+            <button id="energy-badge-btn" class="btn-energy-badge" aria-label="Change today's energy level">🔋</button>
+            <button id="sos-btn" class="btn-sos" aria-label="Too much? Tap for a calm micro-step">🐢 Too much?</button>
+        </span>
     </header>
 
     <main class="stage">
 
+        <!-- Screen 0: energy check-in. Asked once per day, before anything else — also
+             reachable any time via the header's battery badge, to recalibrate mid-day. -->
+        <section id="energy-view" class="view hidden">
+            <h1>How's your battery today?</h1>
+            <p class="energy-options">
+                <button class="btn-energy" data-level="low">🪫 Low</button>
+                <button class="btn-energy" data-level="medium">🔋 Medium</button>
+                <button class="btn-energy" data-level="high">⚡ High</button>
+            </p>
+            <button id="energy-unsure-btn" class="btn-ghost">🤷 No idea</button>
+        </section>
+
         <!-- Screen 1: brain dump. User writes down a task, or one tiny step per line. -->
-        <section id="dump-view" class="view">
+        <section id="dump-view" class="view hidden">
             <h1>What's spinning in your head?</h1>
-            <p class="hint">Write it down. Or break it into tiny steps right away — one per line.</p>
+            <p class="hint" id="dump-hint">Write it down. Or break it into tiny steps right away — one per line.</p>
             <textarea id="dump-input" rows="5" aria-label="Brain dump" placeholder="e.g.&#10;Sort the laundry&#10;Put it in the machine&#10;Add detergent"></textarea>
             <button id="start-btn" class="btn-primary">Start with this one thing</button>
             <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>

@@ -65,6 +65,30 @@ body {
     height: 28px;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The battery badge — always visible, tap it any time to recalibrate today's energy level */
+.btn-energy-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 1.05rem;
+    background: var(--teal-100);
+    border-radius: var(--radius-full);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-energy-badge:hover {
+    background: var(--teal-200);
+    transform: translateY(-1px);
+}
+
 /* "🐢 Too much?" — always reachable, but low-key: a quiet pill, not a red alarm button */
 .btn-sos {
     padding: 8px 16px;
@@ -198,6 +222,50 @@ button {
        derived wash instead so the hover state still shows. */
     background: var(--teal-100);
     color: var(--teal-700);
+}
+
+/* --- Energy check-in (screen 0) --- */
+
+.energy-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin: 0;
+}
+
+/* Soft, equal-weight "chips" rather than a single primary CTA — no answer is the "right" one */
+.btn-energy {
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--teal-700);
+    background: var(--teal-100);
+    border-radius: var(--radius-full);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-energy:hover {
+    background: var(--teal-200);
+    transform: translateY(-1px);
+}
+
+/* Low battery day: a touch calmer, not the full paralysis grey-out (that's .calm) — just a
+   slightly deeper background and softer shadows. Placed before Paralysis mode in this file
+   so .calm's later, equally-specific rules still win if both classes ever end up on body. */
+body.low-battery {
+    --teal-50: #F1EEEA;
+}
+
+body.low-battery .step-card,
+body.low-battery textarea {
+    box-shadow: 0 8px 20px -18px rgba(42, 82, 78, 0.25);
+}
+
+/* High battery day: a slightly livelier, fresher accent — nothing loud, just a bit brighter */
+body.high-battery {
+    --teal-500: #4C9C90;
+    --teal-300: #4C9C90;
 }
 
 /* --- Step view (screen 2) --- */
