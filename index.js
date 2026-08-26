@@ -402,6 +402,9 @@ function renderHome() {
         ? `Continue: step ${currentIndex + 1} of ${steps.length}`
         : "What's spinning in your head?";
 
+    const todayCount = planner.filter(item => plannerBucket(item.due) === 'today').length;
+    plannerLinkBtn.textContent = todayCount > 0 ? `📅 ${todayCount} for today` : '📅 Planner';
+
     renderVaultLink();
 }
 
@@ -435,8 +438,9 @@ function formatParkedWhen(when) {
 }
 
 // Rebuild the vault's list of parked thoughts — same loop/createElement/appendChild
-// shape as renderProgress, just with a text + timestamp + "Let it go" button per entry
-// instead of a dot. An empty vault gets a line of its own instead of staring at nothing.
+// shape as renderProgress, just with a text + timestamp + two buttons per entry instead
+// of a dot: "Bring it back" (into the planner's Someday bucket) or "Let it go" (gone for
+// good). An empty vault gets a line of its own instead of staring at nothing.
 function renderVaultList() {
     vaultList.innerHTML = '';
 
@@ -463,6 +467,21 @@ function renderVaultList() {
         time.dateTime = new Date(entry.when).toISOString();
         time.textContent = formatParkedWhen(entry.when);
 
+        const actions = document.createElement('span'); // groups both buttons, so meta's space-between still reads as [time] ↔ [actions]
+        actions.className = 'vault-item-actions';
+
+        const bringBackBtn = document.createElement('button');
+        bringBackBtn.className = 'btn-ghost';
+        bringBackBtn.textContent = 'Bring it back';
+        bringBackBtn.addEventListener('click', () => {
+            planner.push({ text: entry.text, due: null }); // Someday bucket, no date attached
+            savePlanner();
+            vault.splice(i, 1); // same "done being parked" cleanup as Let it go
+            saveVault();
+            renderVaultList();
+            renderVaultLink();
+        });
+
         const removeBtn = document.createElement('button');
         removeBtn.className = 'btn-ghost';
         removeBtn.textContent = 'Let it go';
@@ -473,8 +492,11 @@ function renderVaultList() {
             renderVaultLink();
         });
 
+        actions.appendChild(bringBackBtn);
+        actions.appendChild(removeBtn);
+
         meta.appendChild(time);
-        meta.appendChild(removeBtn);
+        meta.appendChild(actions);
 
         item.appendChild(text);
         item.appendChild(meta);
@@ -543,16 +565,42 @@ function fillPlannerList(listEl, items, bucket) {
         text.textContent = item.text;
         li.appendChild(text);
 
-        const note = plannerItemNote(item, bucket);
-        if (note) {
-            const noteEl = document.createElement('p');
-            noteEl.className = 'planner-item-note';
-            noteEl.textContent = note;
-            li.appendChild(noteEl);
-        }
+        const meta = document.createElement('p'); // groups the note + button, same trick .vault-item-meta uses
+        meta.className = 'planner-item-meta';
 
+        const noteEl = document.createElement('span');
+        noteEl.className = 'planner-item-note';
+        noteEl.textContent = plannerItemNote(item, bucket) ?? '';
+        meta.appendChild(noteEl);
+
+        const doNowBtn = document.createElement('button');
+        doNowBtn.className = 'btn-ghost';
+        doNowBtn.textContent = 'Do this now';
+        doNowBtn.addEventListener('click', () => doPlannerItemNow(item));
+        meta.appendChild(doNowBtn);
+
+        li.appendChild(meta);
         listEl.appendChild(li);
     });
+}
+
+// "Do this now" — hands the item straight to the brain dump, exactly as if you'd typed
+// it yourself, so it can still be broken into steps before Fibo touches it. Removes the
+// item from the planner right away: once it's in the dump box it's the same kind of
+// "current thing" `steps` already is, and nothing in Fibo ever tracks one task in two
+// places at once — that's the whole reason `planner` and `steps` are separate arrays.
+// (Deliberately not a separate "Done" checkbox left behind in the planner — that would
+// mean remembering to go back and tick it off after finishing, which is exactly the kind
+// of admin overhead the rest of the app tries to remove, not add.)
+function doPlannerItemNow(item) {
+    dumpInput.value = item.text;
+
+    const idx = planner.indexOf(item);
+    if (idx !== -1) planner.splice(idx, 1);
+    savePlanner();
+
+    showView(dumpView);
+    dumpInput.focus();
 }
 
 // Sorts `planner` into its three buckets and paints all three lists.

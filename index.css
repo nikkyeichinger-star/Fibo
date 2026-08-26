@@ -603,6 +603,13 @@ body.high-battery {
     color: var(--ink-400);
 }
 
+/* Groups "Bring it back" + "Let it go" so .vault-item-meta's space-between still only
+   has two things to split: the timestamp, and this pair */
+.vault-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* Shown instead of the list when nothing's parked — an empty vault still gets a line,
    not silence */
 .vault-empty {
@@ -666,10 +673,20 @@ body.high-battery {
     color: var(--ink-900);
 }
 
+/* Groups the note + "Do this now" button, same trick .vault-item-meta uses */
+.planner-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 6px 0 0;
+}
+
 /* The No-Shame note (an overdue item's "still here, no rush") or a Soon/Someday item's
-   due date — same muted treatment either way, never a red flag */
+   due date — same muted treatment either way, never a red flag. Empty and invisible for
+   a dateless Someday item or a Today item due right on time — .planner-item-meta's
+   space-between still puts "Do this now" on the right either way. */
 .planner-item-note {
-    margin: 2px 0 0;
     font-size: 0.82rem;
     color: var(--ink-400);
 }
