@@ -681,13 +681,14 @@ function goToStartScreen() {
     }
 }
 
-// The Fibo logo, tapped as a "home" link — non-destructive, same spirit as the energy
-// badge: just navigate back to whatever's current (a task in progress, or a fresh dump
-// screen), no matter which screen it's tapped from. Drops the calm palette too, in case
-// it's tapped straight out of paralysis mode.
+// The Fibo logo, tapped as a "home" link — always the brain dump screen itself, even
+// mid-task, since that's what "home" means to whoever's tapping it. Non-destructive:
+// unlike resetToDump(), it doesn't touch localStorage or the textarea, so a task still
+// in progress is still sitting there in the background, not lost. Drops the calm
+// palette too, in case it's tapped straight out of paralysis mode.
 function goHome() {
     document.body.classList.remove('calm');
-    goToStartScreen();
+    showView(dumpView);
 }
 
 // Wire up all the buttons
