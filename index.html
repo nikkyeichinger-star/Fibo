@@ -47,14 +47,29 @@
         <section id="step-view" class="view hidden">
             <ul class="progress" id="progress-dots" aria-hidden="true"></ul> <!-- filled in by JS: one dot per step -->
             <p class="step-label" id="step-label">Step 1 of 3</p> <!-- placeholder text, JS overwrites it -->
-            <article class="step-card" id="step-card">
-                <p class="skip-note" id="skip-note"></p>
-                <p id="step-text">…</p> <!-- current step's text, set by JS -->
-            </article>
-            <p class="step-actions">
-                <button id="done-btn" class="btn-primary">Done ✓</button>
-                <button id="skip-btn" class="btn-ghost">Skip →</button>
-            </p>
+
+            <div class="step-main" id="step-main">
+                <article class="step-card" id="step-card">
+                    <p class="skip-note" id="skip-note"></p>
+                    <p id="step-text">…</p> <!-- current step's text, set by JS -->
+                </article>
+                <p class="step-actions">
+                    <button id="done-btn" class="btn-primary">Done ✓</button>
+                    <button id="skip-btn" class="btn-ghost">Skip →</button>
+                    <button id="breakdown-btn" class="btn-ghost btn-breakdown">Too big? Break it down</button>
+                </p>
+            </div>
+
+            <!-- Breakdown panel: a mini brain dump for the current step, reachable any time via
+                 "Too big? Break it down" — same sub-hide trick as the paralysis stages. -->
+            <div class="breakdown-panel sub-hidden" id="breakdown-panel">
+                <p class="hint">Breaking down: <strong id="breakdown-original"></strong></p>
+                <textarea id="breakdown-input" rows="4" aria-label="Smaller pieces" placeholder="Smaller pieces — one per line"></textarea>
+                <p class="step-actions">
+                    <button id="breakdown-confirm-btn" class="btn-primary">Replace it</button>
+                    <button id="breakdown-cancel-btn" class="btn-ghost">Never mind</button>
+                </p>
+            </div>
         </section>
 
         <!-- Screen 3: calm celebration after the last step. Hidden until all steps are done. -->

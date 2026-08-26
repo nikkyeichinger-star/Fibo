@@ -361,6 +361,34 @@ body.high-battery {
     opacity: 1;
 }
 
+/* step-card + step-actions live in here so they can be swapped for .breakdown-panel as a
+   pair (same sub-hide trick .paralysis-stage uses) without losing .view's own gap/layout. */
+.step-main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* The mini brain-dump that replaces step-main while breaking a step down into smaller ones */
+.breakdown-panel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    animation: fade-in 0.5s ease both;
+}
+
+/* Quieter than the other ghost button — an escape hatch, not something to compete with
+   Done/Skip for attention */
+.btn-breakdown {
+    padding: 4px 12px;
+    font-size: 0.82rem;
+    color: var(--ink-400);
+}
+
 /* --- Celebration (screen 3) --- */
 
 /* Soft pulsing coral circle — the calm, non-confetti reward for finishing all steps.

@@ -36,6 +36,13 @@ const stepText = document.getElementById('step-text');         // current step's
 const doneBtn = document.getElementById('done-btn');           // marks the step done
 const skipBtn = document.getElementById('skip-btn');           // skips it without guilt
 const skipNote = document.getElementById('skip-note');         // soft reassurance shown after a skip
+const stepMain = document.getElementById('step-main');         // step-card + its actions, swapped out for the breakdown panel
+const breakdownBtn = document.getElementById('breakdown-btn'); // "Too big? Break it down" — always there, quietly
+const breakdownPanel = document.getElementById('breakdown-panel');
+const breakdownOriginal = document.getElementById('breakdown-original'); // shows which step is being broken down
+const breakdownInput = document.getElementById('breakdown-input');       // the mini brain dump for this one step
+const breakdownConfirmBtn = document.getElementById('breakdown-confirm-btn'); // "Replace it"
+const breakdownCancelBtn = document.getElementById('breakdown-cancel-btn');   // "Never mind"
 
 // Screen 3 controls
 const celebrateMsg = document.getElementById('celebrate-msg'); // random calm message
@@ -438,12 +445,58 @@ function skipStep() {
 
         // Check in after a few skips in a row for THIS step — maybe it's the problem
         if (skippedStep.skips >= 3) {
-            skipNote.textContent = 'This one doesn\'t want to happen yet — maybe it\'s too big? Making it smaller is always allowed.';
+            skipNote.textContent = 'This one doesn\'t want to happen yet — try "Too big? Break it down" below.';
         } else {
             skipNote.textContent = SKIP_NOTES[Math.floor(Math.random() * SKIP_NOTES.length)];
         }
         skipNote.classList.add('visible');
     }, 320); // roughly matches the .leaving CSS transition duration
+}
+
+// "Too big? Break it down" — swap step-main for the breakdown panel, pre-filled with
+// which step is being broken down. Always available, not just after repeated skips.
+function openBreakdown() {
+    breakdownOriginal.textContent = steps[currentIndex].text;
+    breakdownInput.value = '';
+    breakdownInput.classList.remove('nudge');
+    stepMain.classList.add('sub-hidden');
+    breakdownPanel.classList.remove('sub-hidden');
+    breakdownInput.focus();
+}
+
+// "Never mind" — back to the step as it was, nothing changed.
+function closeBreakdown() {
+    breakdownPanel.classList.add('sub-hidden');
+    stepMain.classList.remove('sub-hidden');
+}
+
+// "Replace it" — parse the smaller pieces the same way the brain dump does, then splice
+// them into `steps` right where the too-big step was. currentIndex doesn't need to move:
+// it already points at that slot, so it now points at the first of the new small steps.
+// A Low day still means "max 2 active steps" even here — the same cap startFlow() applies
+// up front runs again afterward, so a 6-piece breakdown doesn't quietly blow past it.
+function confirmBreakdown() {
+    const pieces = parseSteps(breakdownInput.value);
+    if (pieces.length === 0) {
+        breakdownInput.classList.remove('nudge');
+        void breakdownInput.offsetWidth; // restart the CSS animation even if it just played
+        breakdownInput.classList.add('nudge');
+        breakdownInput.focus();
+        return;
+    }
+
+    steps.splice(currentIndex, 1, ...pieces);
+    const capped = capStepsForLowEnergy();
+    saveState();
+    closeBreakdown();
+    renderStep();
+
+    if (capped) {
+        skipNote.textContent = LOW_ENERGY_PARK_NOTE;
+        skipNote.classList.add('visible');
+    } else {
+        skipNote.classList.remove('visible');
+    }
 }
 
 // Show one paralysis stage and hide the rest — a second, nested level of view-switching
@@ -589,6 +642,9 @@ function goToStartScreen() {
 startBtn.addEventListener('click', startFlow);
 doneBtn.addEventListener('click', advance);
 skipBtn.addEventListener('click', skipStep);
+breakdownBtn.addEventListener('click', openBreakdown);
+breakdownConfirmBtn.addEventListener('click', confirmBreakdown);
+breakdownCancelBtn.addEventListener('click', closeBreakdown);
 againBtn.addEventListener('click', resetToDump);
 sosBtn.addEventListener('click', enterParalysis);
 resetDoneBtn.addEventListener('click', startMicroAction);
