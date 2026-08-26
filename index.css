@@ -51,14 +51,23 @@ body {
     padding: 32px 24px 0;
 }
 
+/* Now also the app's home button — reset the button-ness away so it still just reads
+   as the logo + wordmark, with a subtle hover cue as the only sign it's clickable */
 .brand {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 0;
+    background: none;
     font-weight: 600;
     font-size: 1.1rem;
     color: var(--teal-700);
     letter-spacing: 0.02em;
+    transition: opacity 0.2s ease;
+}
+
+.brand:hover {
+    opacity: 0.8;
 }
 
 .logo-img {

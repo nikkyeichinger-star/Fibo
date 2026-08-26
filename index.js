@@ -14,6 +14,7 @@ const vaultView = document.getElementById('vault-view');
 const energyView = document.getElementById('energy-view');
 
 // Header controls
+const homeBtn = document.getElementById('home-btn'); // Fibo logo/wordmark — doubles as a "back to home" link
 const sosBtn = document.getElementById('sos-btn'); // "🐢 Too much?" — reachable from every screen
 const energyBadgeBtn = document.getElementById('energy-badge-btn'); // always-visible battery icon, tap to recalibrate
 
@@ -680,7 +681,17 @@ function goToStartScreen() {
     }
 }
 
+// The Fibo logo, tapped as a "home" link — non-destructive, same spirit as the energy
+// badge: just navigate back to whatever's current (a task in progress, or a fresh dump
+// screen), no matter which screen it's tapped from. Drops the calm palette too, in case
+// it's tapped straight out of paralysis mode.
+function goHome() {
+    document.body.classList.remove('calm');
+    goToStartScreen();
+}
+
 // Wire up all the buttons
+homeBtn.addEventListener('click', goHome);
 startBtn.addEventListener('click', startFlow);
 if (Recognition) micBtn.addEventListener('click', toggleListening);
 doneBtn.addEventListener('click', advance);
