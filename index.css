@@ -178,6 +178,42 @@ textarea.nudge {
     border-color: var(--coral-300);
 }
 
+.dump-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Floats over the textarea's bottom-right corner — same round-icon shape as the battery
+   badge, so it reads as another quiet control rather than a modal-y overlay */
+.btn-mic {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+    background: var(--teal-100);
+    border-radius: var(--radius-full);
+    box-shadow: 0 4px 14px -6px rgba(42, 82, 78, 0.35);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-mic:hover {
+    background: var(--teal-200);
+    transform: translateY(-1px);
+}
+
+/* While actively listening — reuses pulse-soft (see the celebration circle) at a
+   quicker pace, plus the solid accent fill, so "recording" is unmistakable */
+.btn-mic.listening {
+    background: var(--teal-500);
+    color: #ffffff;
+    animation: pulse-soft 1.4s ease-in-out infinite;
+}
+
 button {
     font-family: inherit;
     cursor: pointer;

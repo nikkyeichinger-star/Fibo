@@ -27,6 +27,7 @@ const dumpHint = document.getElementById('dump-hint');    // swapped for a softe
 const startBtn = document.getElementById('start-btn');   // "Start with this one thing"
 const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
 const vaultCountText = document.getElementById('vault-count-text');
+const micBtn = document.getElementById('mic-btn'); // 🎙️ — speak the brain dump instead of typing it; hidden if unsupported
 
 // Screen 2 controls
 const progressDots = document.getElementById('progress-dots'); // container for the little step dots
@@ -259,6 +260,47 @@ function parseSteps(raw) {
         .map(line => line.trim())
         .filter(Boolean)
         .map(text => ({ text, skips: 0 }));
+}
+
+// --- Voice input for the brain dump ---
+// Some browsers only expose this behind a webkit- prefix — check both, and if neither
+// exists, hide the mic button and stop there. Optimistic build, with a fallback.
+const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!Recognition) {
+    micBtn.classList.add('sub-hidden');
+}
+
+// The live SpeechRecognition instance while listening, null the rest of the time —
+// same "hold the one active thing" trick lastView uses for paralysis mode.
+let recognition = null;
+
+// 🎙️ tap toggles listening on/off. Each spoken sentence lands as its own new line in
+// the textarea — the same one-line-per-step shape parseSteps() already expects, so a
+// pause in speech quietly becomes a future step.
+function toggleListening() {
+    if (recognition) {
+        recognition.stop(); // 'end' listener below does the rest of the cleanup
+        return;
+    }
+
+    recognition = new Recognition();
+    recognition.continuous = true; // keep listening across pauses, until the mic is tapped again
+    recognition.lang = 'nl-BE';    // Fibo's UI is English, but its steps are usually thought in Flemish
+
+    recognition.addEventListener('result', (e) => {
+        const transcript = e.results[e.results.length - 1][0].transcript.trim();
+        if (transcript === '') return;
+        dumpInput.value = dumpInput.value === '' ? transcript : `${dumpInput.value}\n${transcript}`;
+    });
+
+    recognition.addEventListener('end', () => {
+        micBtn.classList.remove('listening');
+        recognition = null;
+    });
+
+    micBtn.classList.add('listening');
+    recognition.start();
 }
 
 // Rebuild the row of progress dots to match `steps` and `currentIndex`.
@@ -640,6 +682,7 @@ function goToStartScreen() {
 
 // Wire up all the buttons
 startBtn.addEventListener('click', startFlow);
+if (Recognition) micBtn.addEventListener('click', toggleListening);
 doneBtn.addEventListener('click', advance);
 skipBtn.addEventListener('click', skipStep);
 breakdownBtn.addEventListener('click', openBreakdown);

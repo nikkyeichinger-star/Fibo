@@ -38,7 +38,10 @@
         <section id="dump-view" class="view hidden">
             <h1>What's spinning in your head?</h1>
             <p class="hint" id="dump-hint">Write it down. Or break it into tiny steps right away — one per line.</p>
-            <textarea id="dump-input" rows="5" aria-label="Brain dump" placeholder="e.g.&#10;Sort the laundry&#10;Put it in the machine&#10;Add detergent"></textarea>
+            <div class="dump-input-wrapper">
+                <textarea id="dump-input" rows="5" aria-label="Brain dump" placeholder="e.g.&#10;Sort the laundry&#10;Put it in the machine&#10;Add detergent"></textarea>
+                <button id="mic-btn" class="btn-mic" aria-label="Speak your brain dump">🎙️</button>
+            </div>
             <button id="start-btn" class="btn-primary">Start with this one thing</button>
             <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>
         </section>
