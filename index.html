@@ -41,7 +41,10 @@
             <img src="assets/logos/logo.svg" alt="" class="home-logo">
             <h1 id="home-greeting">…</h1> <!-- time of day + today's energy, set by JS -->
             <button id="home-main-btn" class="btn-primary">…</button> <!-- "Continue: step X of Y" if a task is running, else "What's spinning in your head?" -->
-            <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>
+            <p class="home-links">
+                <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>
+                <button id="planner-link-btn" class="btn-ghost">📅 Planner</button>
+            </p>
         </section>
 
         <!-- Screen 1: brain dump. User writes down a task, or one tiny step per line.
@@ -49,10 +52,10 @@
         <section id="dump-view" class="view hidden">
             <h1>What's spinning in your head?</h1>
             <p class="hint" id="dump-hint">Write it down. Or break it into tiny steps right away — one per line.</p>
-            <div class="dump-input-wrapper">
+            <span class="dump-input-wrapper">
                 <textarea id="dump-input" rows="5" aria-label="Brain dump" placeholder="e.g.&#10;Sort the laundry&#10;Put it in the machine&#10;Add detergent"></textarea>
                 <button id="mic-btn" class="btn-mic" aria-label="Speak your brain dump">🎙️</button>
-            </div>
+            </span>
             <button id="start-btn" class="btn-primary">Start with this one thing</button>
         </section>
 
@@ -61,7 +64,7 @@
             <ul class="progress" id="progress-dots" aria-hidden="true"></ul> <!-- filled in by JS: one dot per step -->
             <p class="step-label" id="step-label">Step 1 of 3</p> <!-- placeholder text, JS overwrites it -->
 
-            <div class="step-main" id="step-main">
+            <section class="step-main" id="step-main">
                 <article class="step-card" id="step-card">
                     <p class="skip-note" id="skip-note"></p>
                     <p id="step-text">…</p> <!-- current step's text, set by JS -->
@@ -71,18 +74,18 @@
                     <button id="skip-btn" class="btn-ghost">Skip →</button>
                     <button id="breakdown-btn" class="btn-ghost btn-breakdown">Too big? Break it down</button>
                 </p>
-            </div>
+            </section>
 
             <!-- Breakdown panel: a mini brain dump for the current step, reachable any time via
                  "Too big? Break it down" — same sub-hide trick as the paralysis stages. -->
-            <div class="breakdown-panel sub-hidden" id="breakdown-panel">
+            <section class="breakdown-panel sub-hidden" id="breakdown-panel">
                 <p class="hint">Breaking down: <strong id="breakdown-original"></strong></p>
                 <textarea id="breakdown-input" rows="4" aria-label="Smaller pieces" placeholder="Smaller pieces — one per line"></textarea>
                 <p class="step-actions">
                     <button id="breakdown-confirm-btn" class="btn-primary">Replace it</button>
                     <button id="breakdown-cancel-btn" class="btn-ghost">Never mind</button>
                 </p>
-            </div>
+            </section>
         </section>
 
         <!-- Screen 3: calm celebration after the last step. Hidden until all steps are done. -->
@@ -159,6 +162,38 @@
             <p class="hint">Nothing urgent. Just parked here until you're ready.</p>
             <ul class="vault-list" id="vault-list"></ul> <!-- filled in by JS, one <li> per parked thought -->
             <button id="vault-back-btn" class="btn-ghost">← Back</button>
+        </section>
+
+        <!-- Screen 7: the planner. The collect-place — separate from the step flow, which stays
+             the do-place. Reachable only via home's quiet "📅 Planner" link, never pushed on
+             you. Three buckets instead of a calendar grid, no times, no red "overdue": see
+             renderPlanner() for the bucket logic and the No-Shame rule. -->
+        <section id="planner-view" class="view hidden">
+            <h1>Planner</h1>
+            <p class="hint">Where things go until you're ready for them. Only days, no times.</p>
+
+            <p class="planner-add">
+                <input type="text" id="planner-input" aria-label="New planner item" placeholder="e.g. Math homework">
+                <input type="date" id="planner-due" aria-label="Due date (optional)">
+                <button id="planner-add-btn" class="btn-primary">Add</button>
+            </p>
+
+            <section class="planner-buckets">
+                <section class="planner-bucket">
+                    <h2>Today</h2>
+                    <ul class="planner-list" id="planner-today-list"></ul>
+                </section>
+                <section class="planner-bucket">
+                    <h2>Soon</h2>
+                    <ul class="planner-list" id="planner-soon-list"></ul>
+                </section>
+                <section class="planner-bucket">
+                    <h2>Someday</h2>
+                    <ul class="planner-list" id="planner-someday-list"></ul>
+                </section>
+            </section>
+
+            <button id="planner-back-btn" class="btn-ghost">← Back</button>
         </section>
 
     </main>

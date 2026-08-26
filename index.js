@@ -14,6 +14,8 @@ const vaultView = document.getElementById('vault-view');
 const energyView = document.getElementById('energy-view');
 // Screen 6: home — the default landing, and where the header logo always returns to
 const homeView = document.getElementById('home-view');
+// Screen 7: the planner — the collect-place, reachable only via home's quiet link
+const plannerView = document.getElementById('planner-view');
 
 // Header controls
 const homeBtn = document.getElementById('home-btn'); // Fibo logo/wordmark — doubles as a "back to home" link
@@ -29,6 +31,16 @@ const homeGreeting = document.getElementById('home-greeting'); // time of day + 
 const homeMainBtn = document.getElementById('home-main-btn');  // one button, two faces — see renderHome()
 const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
 const vaultCountText = document.getElementById('vault-count-text');
+const plannerLinkBtn = document.getElementById('planner-link-btn'); // "📅 Planner" — always there, unlike the vault line
+
+// Screen 7 controls (planner)
+const plannerInput = document.getElementById('planner-input');   // the new item's text
+const plannerDue = document.getElementById('planner-due');       // native date picker, entirely optional
+const plannerAddBtn = document.getElementById('planner-add-btn');
+const plannerTodayList = document.getElementById('planner-today-list');
+const plannerSoonList = document.getElementById('planner-soon-list');
+const plannerSomedayList = document.getElementById('planner-someday-list');
+const plannerBackBtn = document.getElementById('planner-back-btn'); // "← Back" to home
 
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
@@ -164,6 +176,27 @@ function loadVault() {
     }
 }
 
+// Planner items — the collect-place, entirely separate from `steps` (the do-place).
+// Each entry is { text, due } — due is a 'YYYY-MM-DD' string from the date picker, or
+// null for "someday, no date". Its own localStorage key, same reasoning as the vault.
+let planner = [];
+
+function savePlanner() {
+    localStorage.setItem('fibo-planner', JSON.stringify(planner));
+}
+
+function loadPlanner() {
+    const raw = localStorage.getItem('fibo-planner');
+    if (raw === null) return;
+
+    try {
+        planner = JSON.parse(raw);
+    } catch (_) {
+        // storage got corrupted somehow — just forget it and start fresh
+        localStorage.removeItem('fibo-planner');
+    }
+}
+
 // Today's energy level — asked once per day, before anything else.
 // { level, date } — date is a toDateString() like "Tue Aug 11 2026" (no time), so a
 // stale entry from a previous day is a plain string mismatch, nothing to parse.
@@ -236,13 +269,13 @@ function applyEnergyEffects() {
 // so it's the one place that can reliably notice "what was on screen just now".
 let lastView = null;
 
-// Swap which of the seven screens is visible
+// Swap which of the eight screens is visible
 function showView(view) {
     if (view === paralysisView) {
-        const current = [homeView, dumpView, stepView, celebrateView, vaultView, energyView].find(v => !v.classList.contains('hidden'));
+        const current = [homeView, dumpView, stepView, celebrateView, vaultView, energyView, plannerView].find(v => !v.classList.contains('hidden'));
         if (current) lastView = current;
     }
-    [homeView, dumpView, stepView, celebrateView, paralysisView, vaultView, energyView].forEach(v => v.classList.add('hidden'));
+    [homeView, dumpView, stepView, celebrateView, paralysisView, vaultView, energyView, plannerView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -340,15 +373,15 @@ function renderVaultLink() {
     vaultLinkBtn.classList.remove('sub-hidden');
 }
 
-// A short greeting for whatever part of the day it is — 22:00-06:00 gets its own nudge
-// instead of a plain "evening", since that's the one bucket where the honest thing to
-// say is "you should probably be asleep".
+// A short greeting for whatever part of the day it is — lowercase, a little dry, no
+// forced enthusiasm. 22:00-06:00 gets its own nudge instead of a plain "evening", since
+// that's the one bucket where the honest thing to say is "you should probably be asleep".
 function timeOfDayGreeting() {
     const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12) return 'Good morning';
-    if (hour >= 12 && hour < 18) return 'Good day';
-    if (hour >= 18 && hour < 22) return 'Good afternoon';
-    return 'Good night, don\'t forget to sleep';
+    if (hour >= 6 && hour < 12) return 'morning. let\'s ease in';
+    if (hour >= 12 && hour < 18) return 'hey, it\'s the afternoon now';
+    if (hour >= 18 && hour < 22) return 'evening bestie 🌙';
+    return 'it\'s late bestie, sleep >>> tasks';
 }
 
 // Paint home: the greeting (time of day, plus today's energy if it changes anything),
@@ -447,6 +480,120 @@ function renderVaultList() {
         item.appendChild(meta);
         vaultList.appendChild(item);
     });
+}
+
+// Today as a 'YYYY-MM-DD' string — the ISO date format sorts and compares correctly with
+// plain string operators, which is what makes the bucket logic below so simple.
+function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+// Turns a 'YYYY-MM-DD' due date into a short calendar label ("Sep 1") — parsed as
+// explicit year/month/day rather than handed straight to `new Date()`, since that reads
+// the string as UTC midnight and can print the wrong local day near a timezone boundary.
+function formatDue(due) {
+    const [year, month, day] = due.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Which of the three buckets a due date belongs in. ISO date strings compare correctly
+// with plain <=, so "today or earlier" needs no Date parsing at all — overdue lands in
+// Today right along with it, no separate case, which is exactly the point of the
+// No-Shame rule: a missed date isn't a different, worse category, just the same one.
+// Only the 7-day cutoff needs actual day arithmetic (same ms-per-day division
+// formatParkedWhen uses for "how long ago").
+function plannerBucket(due) {
+    if (due === null) return 'someday';
+
+    const today = todayStr();
+    if (due <= today) return 'today';
+
+    const daysUntil = Math.round((new Date(due) - new Date(today)) / 86400000);
+    return daysUntil <= 7 ? 'soon' : 'someday';
+}
+
+// The quiet line under a planner item: the No-Shame "still here, no rush" for something
+// overdue in Today, or just the due date for Soon/Someday. Nothing for a dateless
+// Someday item, or a Today item genuinely due today — the bucket already says enough.
+function plannerItemNote(item, bucket) {
+    if (item.due === null) return null;
+    if (bucket === 'today') return item.due < todayStr() ? 'still here, no rush' : null;
+    return formatDue(item.due);
+}
+
+// One bucket's <ul> — same one-<li>-per-entry shape renderVaultList uses, three times
+// over via renderPlanner() below.
+function fillPlannerList(listEl, items, bucket) {
+    listEl.innerHTML = '';
+
+    if (items.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'planner-empty';
+        empty.textContent = 'Nothing here.';
+        listEl.appendChild(empty);
+        return;
+    }
+
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'planner-item';
+
+        const text = document.createElement('p');
+        text.className = 'planner-item-text';
+        text.textContent = item.text;
+        li.appendChild(text);
+
+        const note = plannerItemNote(item, bucket);
+        if (note) {
+            const noteEl = document.createElement('p');
+            noteEl.className = 'planner-item-note';
+            noteEl.textContent = note;
+            li.appendChild(noteEl);
+        }
+
+        listEl.appendChild(li);
+    });
+}
+
+// Sorts `planner` into its three buckets and paints all three lists.
+function renderPlanner() {
+    const buckets = { today: [], soon: [], someday: [] };
+    planner.forEach(item => buckets[plannerBucket(item.due)].push(item));
+
+    fillPlannerList(plannerTodayList, buckets.today, 'today');
+    fillPlannerList(plannerSoonList, buckets.soon, 'soon');
+    fillPlannerList(plannerSomedayList, buckets.someday, 'someday');
+}
+
+// "Add" — due date is optional; an empty picker becomes null rather than '', so the
+// bucket logic only ever has to check for one "no date" value. Same empty-input nudge
+// pattern as the brain dump and the vault-parking textarea.
+function addPlannerItem() {
+    const text = plannerInput.value.trim();
+    if (text === '') {
+        plannerInput.classList.remove('nudge');
+        void plannerInput.offsetWidth; // restart the CSS animation even if it just played
+        plannerInput.classList.add('nudge');
+        plannerInput.focus();
+        return;
+    }
+
+    planner.push({ text, due: plannerDue.value || null });
+    savePlanner();
+    plannerInput.value = '';
+    plannerDue.value = '';
+    renderPlanner();
+    plannerInput.focus();
+}
+
+// Home's quiet "📅 Planner" link, and the way back from it.
+function openPlanner() {
+    renderPlanner();
+    showView(plannerView);
+}
+
+function closePlanner() {
+    goToStartScreen();
 }
 
 // On a Low day, only a couple of steps stay active — the rest moves to the vault
@@ -757,6 +904,9 @@ parkCancelBtn.addEventListener('click', cancelParking);
 safeContinueBtn.addEventListener('click', startMicroAction);
 vaultLinkBtn.addEventListener('click', openVault);
 vaultBackBtn.addEventListener('click', closeVault);
+plannerLinkBtn.addEventListener('click', openPlanner);
+plannerAddBtn.addEventListener('click', addPlannerItem);
+plannerBackBtn.addEventListener('click', closePlanner);
 energyBtns.forEach(btn => btn.addEventListener('click', () => chooseEnergy(btn.dataset.level)));
 energyUnsureBtn.addEventListener('click', () => chooseEnergy('low')); // plays it safe; the badge can scale it up later
 energyBadgeBtn.addEventListener('click', () => showView(energyView)); // recalibrate any time, no daily gate
@@ -768,6 +918,12 @@ dumpInput.addEventListener('keydown', (e) => {
     }
 });
 
+// Enter in the planner's single-line input is a shortcut for clicking "Add" — unlike the
+// brain dump's textarea, there's no multi-line use for a plain Enter here.
+plannerInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addPlannerItem();
+});
+
 // Startup: load everything first, decide navigation once. Two conditions want a say in
 // what shows first — an unanswered energy check-in, and a resumable task — and they don't
 // agree, so the decision has to happen after both are known: energy always goes first when
@@ -775,6 +931,7 @@ dumpInput.addEventListener('keydown', (e) => {
 loadState();
 loadVault();
 renderVaultLink();
+loadPlanner();
 loadEnergy();
 applyEnergyEffects();
 
