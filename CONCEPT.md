@@ -108,5 +108,6 @@ Overslaan = "nu even niet", nooit falen. Het stapje gaat achteraan de rij. Fibo 
 - **v1 — De Ontdooier: ✅ klaar.** Brain dump, taak → stapjes, één stapje tegelijk, skip-zonder-schuld met zachte check-in, viering bij afronden. Engelstalig, brand-palet + logo geïntegreerd.
 - **v1.5 — Opslag: ✅ klaar.** localStorage met resume na refresh, opruimen na afronden, vangnet voor kapotte opslag. Nog open: dopamine-polish, "break it down"-knop.
 - **v2 — Online & op de telefoon: ✅ klaar (aug 2026).** Live op GitHub Pages, installeerbaar als PWA met eigen app-icoon. Paralysis mode + Dump & Hide + Energy Check-In gebouwd.
-- **Nu (deadline: start schooljaar, sept 2026):** "break it down"-knop en spraak-knop, daarna dagelijks zelf testen op school. Feedback stuurt de rest.
+- **Schoolklaar: ✅ (27 aug 2026).** "Break it down"-knop (splice op de plek zelf, tellers vers op nul) en spraak-knop (Web Speech API, nl-BE, elke zin een eigen regel, verstopt zichzelf op niet-ondersteunde browsers). Logo-tik → startscherm.
+- **Testweek (vanaf 1 sept):** dagelijks gebruiken op school; elke wrijving noteren. Feedback stuurt wat hierna komt.
 - **Later:** AI-taakopknipper (Claude API), zachte planner, routines, accounts + versie voor vrienden, leren & focus-module.

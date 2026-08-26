@@ -70,6 +70,12 @@ body {
     opacity: 0.8;
 }
 
+/* --- Home (screen 6) --- */
+
+.home-logo {
+    height: 72px;
+}
+
 .logo-img {
     height: 28px;
 }

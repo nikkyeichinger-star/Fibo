@@ -12,6 +12,8 @@ const paralysisView = document.getElementById('paralysis-view');
 const vaultView = document.getElementById('vault-view');
 // Screen 0: energy check-in, asked once per day before anything else
 const energyView = document.getElementById('energy-view');
+// Screen 6: home — the default landing, and where the header logo always returns to
+const homeView = document.getElementById('home-view');
 
 // Header controls
 const homeBtn = document.getElementById('home-btn'); // Fibo logo/wordmark — doubles as a "back to home" link
@@ -22,12 +24,16 @@ const energyBadgeBtn = document.getElementById('energy-badge-btn'); // always-vi
 const energyBtns = document.querySelectorAll('.btn-energy'); // 🪫/🔋/⚡ — level read from btn.dataset.level
 const energyUnsureBtn = document.getElementById('energy-unsure-btn'); // "🤷 No idea" — plays it safe as Low
 
+// Screen 6 controls (home)
+const homeGreeting = document.getElementById('home-greeting'); // time of day + today's energy
+const homeMainBtn = document.getElementById('home-main-btn');  // one button, two faces — see renderHome()
+const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
+const vaultCountText = document.getElementById('vault-count-text');
+
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
 const dumpHint = document.getElementById('dump-hint');    // swapped for a softer line on a Low day
 const startBtn = document.getElementById('start-btn');   // "Start with this one thing"
-const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
-const vaultCountText = document.getElementById('vault-count-text');
 const micBtn = document.getElementById('mic-btn'); // 🎙️ — speak the brain dump instead of typing it; hidden if unsupported
 
 // Screen 2 controls
@@ -230,13 +236,13 @@ function applyEnergyEffects() {
 // so it's the one place that can reliably notice "what was on screen just now".
 let lastView = null;
 
-// Swap which of the six screens is visible
+// Swap which of the seven screens is visible
 function showView(view) {
     if (view === paralysisView) {
-        const current = [dumpView, stepView, celebrateView, vaultView, energyView].find(v => !v.classList.contains('hidden'));
+        const current = [homeView, dumpView, stepView, celebrateView, vaultView, energyView].find(v => !v.classList.contains('hidden'));
         if (current) lastView = current;
     }
-    [dumpView, stepView, celebrateView, paralysisView, vaultView, energyView].forEach(v => v.classList.add('hidden'));
+    [homeView, dumpView, stepView, celebrateView, paralysisView, vaultView, energyView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -324,7 +330,7 @@ function renderStep() {
     stepText.textContent = steps[currentIndex].text;
 }
 
-// Show/hide the dump screen's "🔒 N parked" line depending on whether the vault has anything in it.
+// Show/hide home's "🔒 N parked" line depending on whether the vault has anything in it.
 function renderVaultLink() {
     if (vault.length === 0) {
         vaultLinkBtn.classList.add('sub-hidden');
@@ -332,6 +338,48 @@ function renderVaultLink() {
     }
     vaultCountText.textContent = String(vault.length);
     vaultLinkBtn.classList.remove('sub-hidden');
+}
+
+// A short "Good morning/afternoon/evening" — same hour-bucket logic formatParkedWhen
+// uses for "this morning/afternoon/evening", just phrased as a greeting instead.
+function timeOfDayGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if(hour > 12 < 18) return 'Good day'
+    if (hour > 18) return 'Good afternoon';
+    return 'Good evening';
+}
+
+// Paint home: the greeting (time of day, plus today's energy if it changes anything),
+// and the one main button — its label and destination both depend on whether a task is
+// currently running. handleHomeMainBtn() re-checks `steps` itself at click time, so this
+// is the only place that needs to know the button's two faces.
+function renderHome() {
+    const greeting = timeOfDayGreeting();
+    if (isLowEnergy()) {
+        homeGreeting.textContent = `${greeting}. Low battery day — we'll keep it small. 🐢`;
+    } else if (energy?.level === 'high') {
+        homeGreeting.textContent = `${greeting}. Feeling energized today. ⚡`;
+    } else {
+        homeGreeting.textContent = `${greeting}.`;
+    }
+
+    homeMainBtn.textContent = steps.length > 0
+        ? `Continue: step ${currentIndex + 1} of ${steps.length}`
+        : "What's spinning in your head?";
+
+    renderVaultLink();
+}
+
+// Home's one button, two faces: resume the running task, or open a fresh brain dump.
+function handleHomeMainBtn() {
+    if (steps.length > 0) {
+        renderStep();
+        showView(stepView);
+    } else {
+        showView(dumpView);
+        dumpInput.focus();
+    }
 }
 
 // Turns a parked thought's timestamp into a soft, relative description — never an exact
@@ -614,14 +662,14 @@ function parkThought() {
     }, { once: true });
 }
 
-// The vault, on its own top-level screen — only reachable from the dump screen's vault line.
+// The vault, on its own top-level screen — only reachable from home's vault line.
 function openVault() {
     renderVaultList();
     showView(vaultView);
 }
 
 function closeVault() {
-    showView(dumpView);
+    goToStartScreen();
 }
 
 // Leaves paralysis mode entirely: drops the calm palette and returns to wherever the user
@@ -629,7 +677,7 @@ function closeVault() {
 // app already works. Used by stage 3's "I can continue" and by every "I'm okay again" exit.
 function exitParalysis() {
     document.body.classList.remove('calm');
-    showView(lastView || dumpView);
+    showView(lastView || homeView);
 }
 
 // "One more thing" — clear the input and go back to a fresh brain dump.
@@ -670,29 +718,24 @@ function chooseEnergy(level) {
     }
 }
 
-// Where to land once the energy check-in is settled (today's, or none needed): resume
-// a task that's already in progress, or start a fresh brain dump.
+// Where to land once the energy check-in is settled (today's, or none needed): home,
+// with its greeting and main button freshly painted for however things stand right now.
 function goToStartScreen() {
-    if (steps.length > 0) {
-        renderStep();
-        showView(stepView);
-    } else {
-        showView(dumpView);
-    }
+    renderHome();
+    showView(homeView);
 }
 
-// The Fibo logo, tapped as a "home" link — always the brain dump screen itself, even
-// mid-task, since that's what "home" means to whoever's tapping it. Non-destructive:
-// unlike resetToDump(), it doesn't touch localStorage or the textarea, so a task still
-// in progress is still sitting there in the background, not lost. Drops the calm
-// palette too, in case it's tapped straight out of paralysis mode.
+// The Fibo logo, tapped as a "home" link from anywhere — same destination as
+// goToStartScreen(), just also dropping the calm palette in case it's tapped straight
+// out of paralysis mode.
 function goHome() {
     document.body.classList.remove('calm');
-    showView(dumpView);
+    goToStartScreen();
 }
 
 // Wire up all the buttons
 homeBtn.addEventListener('click', goHome);
+homeMainBtn.addEventListener('click', handleHomeMainBtn);
 startBtn.addEventListener('click', startFlow);
 if (Recognition) micBtn.addEventListener('click', toggleListening);
 doneBtn.addEventListener('click', advance);
