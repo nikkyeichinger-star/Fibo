@@ -340,14 +340,15 @@ function renderVaultLink() {
     vaultLinkBtn.classList.remove('sub-hidden');
 }
 
-// A short "Good morning/afternoon/evening" — same hour-bucket logic formatParkedWhen
-// uses for "this morning/afternoon/evening", just phrased as a greeting instead.
+// A short greeting for whatever part of the day it is — 22:00-06:00 gets its own nudge
+// instead of a plain "evening", since that's the one bucket where the honest thing to
+// say is "you should probably be asleep".
 function timeOfDayGreeting() {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if(hour > 12 < 18) return 'Good day'
-    if (hour > 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour >= 6 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 18) return 'Good day';
+    if (hour >= 18 && hour < 22) return 'Good afternoon';
+    return 'Good night, don\'t forget to sleep';
 }
 
 // Paint home: the greeting (time of day, plus today's energy if it changes anything),
