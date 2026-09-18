@@ -1209,3 +1209,10 @@ if (needsEnergyCheckIn()) {
 } else {
     goToStartScreen();
 }
+
+// Offline support — same feature-detection reflex as the mic button: register if the
+// browser supports it, do nothing otherwise. Registered on 'load' so it never competes
+// with the page's own first paint for bandwidth.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
