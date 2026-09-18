@@ -41,9 +41,11 @@
             <img src="assets/logos/logo.svg" alt="" class="home-logo">
             <h1 id="home-greeting">…</h1> <!-- time of day + today's energy, set by JS -->
             <button id="home-main-btn" class="btn-primary">…</button> <!-- "Continue: step X of Y" if a task is running, else "What's spinning in your head?" -->
+            <button id="routine-line-btn" class="btn-ghost sub-hidden">…</button> <!-- at most one, matching the hour — see renderRoutineLine() -->
             <p class="home-links">
                 <button id="vault-link-btn" class="btn-ghost sub-hidden">🔒 <span id="vault-count-text"></span> parked</button>
                 <button id="planner-link-btn" class="btn-ghost">📅 Planner</button>
+                <button id="routines-link-btn" class="btn-ghost">🔁 Routines</button>
             </p>
         </section>
 
@@ -93,6 +95,7 @@
             <!-- the soft pulsing glow behind the message is pure CSS (::before on #celebrate-view), no confetti -->
             <h1 id="celebrate-msg">Nicely done 🌿</h1> <!-- JS swaps this for a random message -->
             <p class="hint">Nothing to do, for a moment.</p>
+            <p class="hint sub-hidden" id="celebrate-note"></p> <!-- shown only when finishing a routine parked a real task — see advance() -->
             <button id="again-btn" class="btn-primary">One more thing</button>
         </section>
 
@@ -194,6 +197,26 @@
             </section>
 
             <button id="planner-back-btn" class="btn-ghost">← Back</button>
+        </section>
+
+        <!-- Screen 8: the routine editor. One step per line, per routine, same shape the
+             brain dump already uses — reachable only via home's quiet "🔁 Routines" link. -->
+        <section id="routines-view" class="view hidden">
+            <h1>Your routines</h1>
+            <p class="hint">One step per line. Nothing fancy.</p>
+
+            <section class="routine-editor-block">
+                <h2>🌅 Morning</h2>
+                <textarea id="routine-morning-input" rows="4" aria-label="Morning routine steps"></textarea>
+            </section>
+
+            <section class="routine-editor-block">
+                <h2>🌙 Evening</h2>
+                <textarea id="routine-evening-input" rows="4" aria-label="Evening routine steps"></textarea>
+            </section>
+
+            <button id="routines-save-btn" class="btn-primary">Save</button>
+            <button id="routines-back-btn" class="btn-ghost">← Back</button>
         </section>
 
     </main>

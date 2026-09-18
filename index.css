@@ -80,6 +80,8 @@ body {
    a handful of elements even once there's somewhere else to go */
 .home-links {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
 }
 
@@ -697,6 +699,23 @@ body.high-battery {
     padding: 8px 0;
     color: var(--ink-400);
     font-size: 0.9rem;
+}
+
+/* --- The routine editor --- */
+
+.routine-editor-block {
+    width: 100%;
+    text-align: left;
+}
+
+/* Same quiet label treatment as .planner-bucket h2 */
+.routine-editor-block h2 {
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-400);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 /* The whole app reads color exclusively through the tokens in :root, so re-defining

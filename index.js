@@ -16,6 +16,8 @@ const energyView = document.getElementById('energy-view');
 const homeView = document.getElementById('home-view');
 // Screen 7: the planner — the collect-place, reachable only via home's quiet link
 const plannerView = document.getElementById('planner-view');
+// Screen 8: the routine editor — reachable only via home's quiet "🔁 Routines" link
+const routinesView = document.getElementById('routines-view');
 
 // Header controls
 const homeBtn = document.getElementById('home-btn'); // Fibo logo/wordmark — doubles as a "back to home" link
@@ -29,9 +31,11 @@ const energyUnsureBtn = document.getElementById('energy-unsure-btn'); // "🤷 N
 // Screen 6 controls (home)
 const homeGreeting = document.getElementById('home-greeting'); // time of day + today's energy
 const homeMainBtn = document.getElementById('home-main-btn');  // one button, two faces — see renderHome()
+const routineLineBtn = document.getElementById('routine-line-btn'); // at most one routine, matching the hour — see renderRoutineLine()
 const vaultLinkBtn = document.getElementById('vault-link-btn');   // "🔒 N parked" — hidden while the vault is empty
 const vaultCountText = document.getElementById('vault-count-text');
 const plannerLinkBtn = document.getElementById('planner-link-btn'); // "📅 Planner" — always there, unlike the vault line
+const routinesLinkBtn = document.getElementById('routines-link-btn'); // "🔁 Routines" — always there, opens the editor
 
 // Screen 7 controls (planner)
 const plannerInput = document.getElementById('planner-input');   // the new item's text
@@ -41,6 +45,12 @@ const plannerTodayList = document.getElementById('planner-today-list');
 const plannerSoonList = document.getElementById('planner-soon-list');
 const plannerSomedayList = document.getElementById('planner-someday-list');
 const plannerBackBtn = document.getElementById('planner-back-btn'); // "← Back" to home
+
+// Screen 8 controls (routine editor)
+const routineMorningInput = document.getElementById('routine-morning-input'); // one step per line
+const routineEveningInput = document.getElementById('routine-evening-input'); // one step per line
+const routinesSaveBtn = document.getElementById('routines-save-btn');
+const routinesBackBtn = document.getElementById('routines-back-btn'); // "← Back" to home
 
 // Screen 1 controls
 const dumpInput = document.getElementById('dump-input'); // textarea, one line = one step
@@ -66,6 +76,7 @@ const breakdownCancelBtn = document.getElementById('breakdown-cancel-btn');   //
 
 // Screen 3 controls
 const celebrateMsg = document.getElementById('celebrate-msg'); // random calm message
+const celebrateNote = document.getElementById('celebrate-note'); // "your task is waiting in the vault" — only after a routine parked one
 const againBtn = document.getElementById('again-btn');         // back to a fresh brain dump
 
 // Screen 4 controls — the 3-stage rescue flow, plus the resting state reached from stage 3
@@ -150,9 +161,18 @@ const MICRO_ACTIONS = [
 let steps = [];
 let currentIndex = 0;
 
+// Which routine (by id) is currently loaded into `steps`, if any — set by startRoutine(),
+// read by advance() when the last step finishes, to know whose lastDone to stamp.
+let activeRoutineId = null;
+
+// Whether starting that routine parked a real task that was already running — advance()
+// mentions it once, on the celebration screen, so finishing the routine never reads as
+// "and your other task is gone". See parkCurrentTask().
+let parkedTaskForRoutine = false;
+
 // Stash the current task in localStorage, so a reload doesn't lose it.
 function saveState() {
-    localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex }));
+    localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex, activeRoutineId, parkedTaskForRoutine }));
 }
 
 // Thoughts parked during paralysis mode — a separate localStorage key from the current
@@ -194,6 +214,37 @@ function loadPlanner() {
     } catch (_) {
         // storage got corrupted somehow — just forget it and start fresh
         localStorage.removeItem('fibo-planner');
+    }
+}
+
+// Routines — a named, reusable list of steps (e.g. everything you do first thing in the
+// morning). Stored separately from `steps` (today's do-place, whatever's actually running
+// right now); starting one just loads its steps into `steps` — see startRoutine(). lastDone
+// is the only history kept: one date, no streak, no count, no "you missed a day" — see
+// renderRoutineLine(). Its own localStorage key, same reasoning as the vault and planner.
+let routines = [];
+
+function saveRoutines() {
+    localStorage.setItem('fibo-routines', JSON.stringify(routines));
+}
+
+function loadRoutines() {
+    const raw = localStorage.getItem('fibo-routines');
+    if (raw === null) {
+        // First run — seed two starter routines so home always has one to offer.
+        routines = [
+            { id: 'morning', name: 'Morning', icon: '🌅', steps: ['Get up', 'Take your medication', 'Brush your teeth', 'Check your bag'], lastDone: null },
+            { id: 'evening', name: 'Evening', icon: '🌙', steps: ['Set out tomorrow\'s clothes', 'Charge your phone', 'Brush your teeth', 'Lock the door'], lastDone: null },
+        ];
+        saveRoutines();
+        return;
+    }
+
+    try {
+        routines = JSON.parse(raw);
+    } catch (_) {
+        // storage got corrupted somehow — just forget it and start fresh
+        localStorage.removeItem('fibo-routines');
     }
 }
 
@@ -272,10 +323,10 @@ let lastView = null;
 // Swap which of the eight screens is visible
 function showView(view) {
     if (view === paralysisView) {
-        const current = [homeView, dumpView, stepView, celebrateView, vaultView, energyView, plannerView].find(v => !v.classList.contains('hidden'));
+        const current = [homeView, dumpView, stepView, celebrateView, vaultView, energyView, plannerView, routinesView].find(v => !v.classList.contains('hidden'));
         if (current) lastView = current;
     }
-    [homeView, dumpView, stepView, celebrateView, paralysisView, vaultView, energyView, plannerView].forEach(v => v.classList.add('hidden'));
+    [homeView, dumpView, stepView, celebrateView, paralysisView, vaultView, energyView, plannerView, routinesView].forEach(v => v.classList.add('hidden'));
     view.classList.remove('hidden');
 }
 
@@ -406,6 +457,34 @@ function renderHome() {
     plannerLinkBtn.textContent = todayCount > 0 ? `📅 ${todayCount} for today` : '📅 Planner';
 
     renderVaultLink();
+    renderRoutineLine();
+}
+
+// Which routine (if any) fits right now — before noon offers Morning, 18:00 onward offers
+// Evening, the stretch between offers neither. Home shows at most one line, never both,
+// and never a routine menu to pick from.
+function routineForNow() {
+    const hour = new Date().getHours();
+    if (hour < 12) return routines.find(r => r.id === 'morning') ?? null;
+    if (hour >= 18) return routines.find(r => r.id === 'evening') ?? null;
+    return null;
+}
+
+// Paints home's one routine line, or hides it entirely outside the morning/evening windows.
+// "done today ✓" is the only nod to having done it before — no streaks, no "3 days in a
+// row", just today's fact or nothing at all. Coming back after 3 weeks reads identically to
+// coming back after 1 day.
+function renderRoutineLine() {
+    const routine = routineForNow();
+    if (!routine) {
+        routineLineBtn.classList.add('sub-hidden');
+        return;
+    }
+
+    const doneToday = routine.lastDone === todayStr();
+    routineLineBtn.textContent = `${routine.icon} ${routine.name} routine${doneToday ? ' · done today ✓' : ''}`;
+    routineLineBtn.dataset.routineId = routine.id;
+    routineLineBtn.classList.remove('sub-hidden');
 }
 
 // Home's one button, two faces: resume the running task, or open a fresh brain dump.
@@ -661,6 +740,49 @@ function capStepsForLowEnergy() {
     return true;
 }
 
+// Parks whatever's left of the current task into the vault, so a genuine one-off task is
+// never silently thrown away — same splice + vault + save shape capStepsForLowEnergy()
+// already uses. Only what's still ahead, from currentIndex: whatever's already done
+// doesn't need parking. But if what's currently running is itself a routine (activeRoutineId
+// is still whatever it was before the caller reassigns it), its remaining steps don't need a
+// vault entry at all — the routine already remembers them, so running it again later brings
+// back the full list on its own; parking would just leave a stale duplicate sitting in the
+// vault forever. Returns whether it actually parked anything, so callers know whether to
+// mention it afterward.
+function parkCurrentTask() {
+    if (steps.length === 0) return false;
+
+    const remaining = steps.splice(currentIndex);
+    const wasRoutine = activeRoutineId !== null;
+    if (!wasRoutine) {
+        remaining.forEach(step => vault.push({ text: step.text, when: Date.now() }));
+        saveVault();
+        renderVaultLink();
+    }
+    steps = [];
+    currentIndex = 0;
+    return !wasRoutine;
+}
+
+// Starting a routine loads its steps straight into `steps`, exactly like a fresh brain
+// dump — Done/Skip/Break it down all just work, no routine-specific step logic needed.
+// If a real task was already running, park it first so the routine never quietly replaces
+// it (see parkCurrentTask()); advance() mentions that once the routine ends.
+function startRoutine(routine) {
+    const parkedTask = parkCurrentTask();
+
+    // .map() builds a fresh array of fresh objects, not a reference into routine.steps —
+    // otherwise skipping or breaking down a step mid-routine would edit the routine itself.
+    steps = routine.steps.map(text => ({ text, skips: 0 }));
+    currentIndex = 0;
+    activeRoutineId = routine.id;
+    parkedTaskForRoutine = parkedTask;
+    saveState();
+    renderStep();
+    showView(stepView);
+    skipNote.classList.remove('visible');
+}
+
 // "Start with this one thing" — parse the brain dump into steps and move to screen 2.
 // If nothing was typed, gently nudge the textarea instead of showing a harsh error.
 function startFlow() {
@@ -673,6 +795,11 @@ function startFlow() {
         return;
     }
     currentIndex = 0;
+    // A fresh brain dump is never a routine — if activeRoutineId/parkedTaskForRoutine were
+    // still set from a routine that got abandoned rather than finished, leaving them would
+    // make advance() stamp that routine's lastDone once *this* unrelated task completes.
+    activeRoutineId = null;
+    parkedTaskForRoutine = false;
     const capped = capStepsForLowEnergy();
     saveState();
     renderStep();
@@ -706,7 +833,29 @@ function advance() {
             currentIndex = 0;
             dumpInput.value = ''; // so a fresh dump screen doesn't show the just-finished task's text
             localStorage.removeItem('fibo-state'); // nothing left to resume
+
+            // If this was a routine, stamp today onto it — the only history it ever gets.
+            if (activeRoutineId) {
+                const routine = routines.find(r => r.id === activeRoutineId);
+                if (routine) {
+                    routine.lastDone = todayStr();
+                    saveRoutines();
+                }
+            }
+
             celebrateMsg.textContent = CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
+
+            // A routine that parked a real task doesn't just make it vanish — say so, once,
+            // so finishing the routine never reads as "and your other task is gone".
+            if (parkedTaskForRoutine) {
+                celebrateNote.textContent = 'Your task is waiting in the vault 🔒';
+                celebrateNote.classList.remove('sub-hidden');
+            } else {
+                celebrateNote.classList.add('sub-hidden');
+            }
+            activeRoutineId = null;
+            parkedTaskForRoutine = false;
+
             showView(celebrateView);
         } else {
             saveState();
@@ -868,6 +1017,31 @@ function closeVault() {
     goToStartScreen();
 }
 
+// Opens the routine editor — both routines at once, one textarea each, prefilled with
+// their current steps.
+function openRoutines() {
+    const morning = routines.find(r => r.id === 'morning');
+    const evening = routines.find(r => r.id === 'evening');
+    routineMorningInput.value = morning ? morning.steps.join('\n') : '';
+    routineEveningInput.value = evening ? evening.steps.join('\n') : '';
+    showView(routinesView);
+}
+
+function closeRoutines() {
+    goToStartScreen();
+}
+
+// "Save" — re-parse both textareas the same one-line-per-step way parseSteps always has,
+// and keep just the step text: skips are a per-run thing, not part of the routine itself.
+function saveRoutinesEdit() {
+    const morning = routines.find(r => r.id === 'morning');
+    const evening = routines.find(r => r.id === 'evening');
+    if (morning) morning.steps = parseSteps(routineMorningInput.value).map(step => step.text);
+    if (evening) evening.steps = parseSteps(routineEveningInput.value).map(step => step.text);
+    saveRoutines();
+    closeRoutines();
+}
+
 // Leaves paralysis mode entirely: drops the calm palette and returns to wherever the user
 // actually was — one relevant task, shown the same one-thing-at-a-time way the rest of the
 // app already works. Used by stage 3's "I can continue" and by every "I'm okay again" exit.
@@ -895,6 +1069,8 @@ function loadState() {
         const saved = JSON.parse(raw);
         steps = saved.steps;
         currentIndex = saved.currentIndex;
+        activeRoutineId = saved.activeRoutineId ?? null;
+        parkedTaskForRoutine = saved.parkedTaskForRoutine ?? false;
     } catch (_) {
         // storage got corrupted somehow — just forget it and start fresh
         localStorage.removeItem('fibo-state');
@@ -955,6 +1131,13 @@ vaultBackBtn.addEventListener('click', closeVault);
 plannerLinkBtn.addEventListener('click', openPlanner);
 plannerAddBtn.addEventListener('click', addPlannerItem);
 plannerBackBtn.addEventListener('click', closePlanner);
+routineLineBtn.addEventListener('click', () => {
+    const routine = routines.find(r => r.id === routineLineBtn.dataset.routineId);
+    if (routine) startRoutine(routine);
+});
+routinesLinkBtn.addEventListener('click', openRoutines);
+routinesSaveBtn.addEventListener('click', saveRoutinesEdit);
+routinesBackBtn.addEventListener('click', closeRoutines);
 energyBtns.forEach(btn => btn.addEventListener('click', () => chooseEnergy(btn.dataset.level)));
 energyUnsureBtn.addEventListener('click', () => chooseEnergy('low')); // plays it safe; the badge can scale it up later
 energyBadgeBtn.addEventListener('click', () => showView(energyView)); // recalibrate any time, no daily gate
@@ -980,6 +1163,7 @@ loadState();
 loadVault();
 renderVaultLink();
 loadPlanner();
+loadRoutines();
 loadEnergy();
 applyEnergyEffects();
 
