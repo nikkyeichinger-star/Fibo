@@ -76,7 +76,7 @@ const breakdownCancelBtn = document.getElementById('breakdown-cancel-btn');   //
 
 // Screen 3 controls
 const celebrateMsg = document.getElementById('celebrate-msg'); // random calm message
-const celebrateNote = document.getElementById('celebrate-note'); // "your task is waiting in the vault" — only after a routine parked one
+const celebrateNote = document.getElementById('celebrate-note'); // "your task is waiting in the vault" — only when starting this run parked one
 const againBtn = document.getElementById('again-btn');         // back to a fresh brain dump
 
 // Screen 4 controls — the 3-stage rescue flow, plus the resting state reached from stage 3
@@ -117,6 +117,10 @@ const CELEBRATIONS = [
 
 // Shown whenever a Low day automatically parks the overflow of a task — see capStepsForLowEnergy()
 const LOW_ENERGY_PARK_NOTE = 'Today we\'re keeping it light — the rest is waiting safely in your vault for whenever you\'re ready. 🌙';
+
+// Shown whenever a Low day trims a routine's steps — see capRoutineForLowEnergy(). No vault
+// mention here: nothing was parked, the rest is just still sitting in the routine itself.
+const LOW_ENERGY_ROUTINE_NOTE = 'Today we\'re keeping it light — the rest of the routine is still there, whenever you run it again. 🌙';
 
 // Pool of soft reassurances shown after a skip — no pressure, no guilt
 const SKIP_NOTES = [
@@ -165,14 +169,14 @@ let currentIndex = 0;
 // read by advance() when the last step finishes, to know whose lastDone to stamp.
 let activeRoutineId = null;
 
-// Whether starting that routine parked a real task that was already running — advance()
-// mentions it once, on the celebration screen, so finishing the routine never reads as
-// "and your other task is gone". See parkCurrentTask().
-let parkedTaskForRoutine = false;
+// Whether starting *this* run (a routine or a fresh brain dump) parked a real task that
+// was already going — advance() mentions it once, on the celebration screen, so finishing
+// this run never reads as "and your other task is gone". See parkCurrentTask().
+let parkedPreviousTask = false;
 
 // Stash the current task in localStorage, so a reload doesn't lose it.
 function saveState() {
-    localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex, activeRoutineId, parkedTaskForRoutine }));
+    localStorage.setItem('fibo-state', JSON.stringify({ steps, currentIndex, activeRoutineId, parkedPreviousTask }));
 }
 
 // Thoughts parked during paralysis mode — a separate localStorage key from the current
@@ -435,6 +439,14 @@ function timeOfDayGreeting() {
     return 'it\'s late bestie, sleep >>> tasks';
 }
 
+// " Morning" if the steps currently running came from a routine, else '' — spliced into
+// the "Continue" label so resuming a routine reads as "Continue Morning: step 2 of 4"
+// instead of a generic step count that could be anything.
+function continueRoutineSuffix() {
+    const routine = routines.find(r => r.id === activeRoutineId);
+    return routine ? ` ${routine.name}` : '';
+}
+
 // Paint home: the greeting (time of day, plus today's energy if it changes anything),
 // and the one main button — its label and destination both depend on whether a task is
 // currently running. handleHomeMainBtn() re-checks `steps` itself at click time, so this
@@ -450,7 +462,7 @@ function renderHome() {
     }
 
     homeMainBtn.textContent = steps.length > 0
-        ? `Continue: step ${currentIndex + 1} of ${steps.length}`
+        ? `Continue${continueRoutineSuffix()}: step ${currentIndex + 1} of ${steps.length}`
         : "What's spinning in your head?";
 
     const todayCount = planner.filter(item => plannerBucket(item.due) === 'today').length;
@@ -740,6 +752,15 @@ function capStepsForLowEnergy() {
     return true;
 }
 
+// Low-day cap for routines — same "keep it small" idea as capStepsForLowEnergy(), but the
+// overflow never goes to the vault: the routine already remembers it, so there's nothing to
+// park, just steps not loaded yet. Takes the routine's own plain-string step list and
+// returns the (possibly shorter) list to actually run today.
+function capRoutineForLowEnergy(routineSteps) {
+    if (!isLowEnergy() || routineSteps.length <= 2) return routineSteps;
+    return routineSteps.slice(0, 2);
+}
+
 // Parks whatever's left of the current task into the vault, so a genuine one-off task is
 // never silently thrown away — same splice + vault + save shape capStepsForLowEnergy()
 // already uses. Only what's still ahead, from currentIndex: whatever's already done
@@ -770,36 +791,52 @@ function parkCurrentTask() {
 // it (see parkCurrentTask()); advance() mentions that once the routine ends.
 function startRoutine(routine) {
     const parkedTask = parkCurrentTask();
+    const routineSteps = capRoutineForLowEnergy(routine.steps);
+    const capped = routineSteps.length < routine.steps.length;
 
     // .map() builds a fresh array of fresh objects, not a reference into routine.steps —
     // otherwise skipping or breaking down a step mid-routine would edit the routine itself.
-    steps = routine.steps.map(text => ({ text, skips: 0 }));
+    steps = routineSteps.map(text => ({ text, skips: 0 }));
     currentIndex = 0;
     activeRoutineId = routine.id;
-    parkedTaskForRoutine = parkedTask;
+    parkedPreviousTask = parkedTask;
     saveState();
     renderStep();
     showView(stepView);
-    skipNote.classList.remove('visible');
+
+    if (capped) {
+        skipNote.textContent = LOW_ENERGY_ROUTINE_NOTE;
+        skipNote.classList.add('visible');
+    } else {
+        skipNote.classList.remove('visible');
+    }
 }
 
 // "Start with this one thing" — parse the brain dump into steps and move to screen 2.
 // If nothing was typed, gently nudge the textarea instead of showing a harsh error.
 function startFlow() {
-    steps = parseSteps(dumpInput.value);
-    if (steps.length === 0) {
+    // Parsed into a local first, not straight into `steps` — otherwise an empty dump would
+    // already have clobbered whatever task was running before this check even runs.
+    const freshSteps = parseSteps(dumpInput.value);
+    if (freshSteps.length === 0) {
         dumpInput.classList.remove('nudge');
         void dumpInput.offsetWidth; // restart the CSS animation even if it just played
         dumpInput.classList.add('nudge');
         dumpInput.focus();
         return;
     }
+
+    // Never silently overwrite whatever was already running (e.g. reached here mid-task via
+    // the planner's "Do this now") — park it first, same as starting a routine does.
+    const parkedTask = parkCurrentTask();
+
+    steps = freshSteps;
     currentIndex = 0;
-    // A fresh brain dump is never a routine — if activeRoutineId/parkedTaskForRoutine were
-    // still set from a routine that got abandoned rather than finished, leaving them would
-    // make advance() stamp that routine's lastDone once *this* unrelated task completes.
+    // A fresh brain dump is never a routine — if activeRoutineId was still set from a
+    // routine that got abandoned rather than finished, leaving it would make advance()
+    // stamp that routine's lastDone once *this* unrelated task completes.
     activeRoutineId = null;
-    parkedTaskForRoutine = false;
+    parkedPreviousTask = parkedTask;
     const capped = capStepsForLowEnergy();
     saveState();
     renderStep();
@@ -845,16 +882,16 @@ function advance() {
 
             celebrateMsg.textContent = CELEBRATIONS[Math.floor(Math.random() * CELEBRATIONS.length)];
 
-            // A routine that parked a real task doesn't just make it vanish — say so, once,
-            // so finishing the routine never reads as "and your other task is gone".
-            if (parkedTaskForRoutine) {
+            // If starting this run parked an earlier task, it didn't just vanish — say so,
+            // once, so finishing this one never reads as "and your other task is gone".
+            if (parkedPreviousTask) {
                 celebrateNote.textContent = 'Your task is waiting in the vault 🔒';
                 celebrateNote.classList.remove('sub-hidden');
             } else {
                 celebrateNote.classList.add('sub-hidden');
             }
             activeRoutineId = null;
-            parkedTaskForRoutine = false;
+            parkedPreviousTask = false;
 
             showView(celebrateView);
         } else {
@@ -1070,7 +1107,7 @@ function loadState() {
         steps = saved.steps;
         currentIndex = saved.currentIndex;
         activeRoutineId = saved.activeRoutineId ?? null;
-        parkedTaskForRoutine = saved.parkedTaskForRoutine ?? false;
+        parkedPreviousTask = saved.parkedPreviousTask ?? false;
     } catch (_) {
         // storage got corrupted somehow — just forget it and start fresh
         localStorage.removeItem('fibo-state');
