@@ -1210,6 +1210,18 @@ if (needsEnergyCheckIn()) {
     goToStartScreen();
 }
 
+// A phone usually suspends a PWA in the background rather than fully reloading it — so
+// without this, opening the app after midnight just shows whatever screen was on screen
+// the night before, and today's mood never actually gets asked. Catches that: whenever the
+// app comes back to the foreground, re-run the same daily gate the initial load already
+// applies. load() itself never fires 'visibilitychange', so this can't double up with the
+// check just above.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && needsEnergyCheckIn()) {
+        showView(energyView);
+    }
+});
+
 // Offline support — same feature-detection reflex as the mic button: register if the
 // browser supports it, do nothing otherwise. Registered on 'load' so it never competes
 // with the page's own first paint for bandwidth.
