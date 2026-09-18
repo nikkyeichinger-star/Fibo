@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fibo-v1';
+const CACHE_NAME = 'fibo-v2';
 
 const APP_SHELL = [
   './',
